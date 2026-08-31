@@ -1,7 +1,7 @@
 id: T001
 kind: governance
 contract_version: 2
-status: DESIGNING
+status: READY
 
 goal: Close the two known merge-governance gaps before the repository is used for product development.
 current_behavior: Pull-request checks did not explicitly require MERGE_READY, GitHub Environments permitted administrator bypass while configuration reported success, and the Approval Gates classifier fails before human approval because its workflow does not install PyYAML.
@@ -90,8 +90,14 @@ git:
   integration_candidate_sha: null
 
 approvals:
-  requirement: null
-  architecture: null
+  requirement:
+    by: product-authority
+    at: 2026-08-31T17:35:51+08:00
+    source_uri: codex://thread/current#continue-t001-v2
+  architecture:
+    by: t001-architecture-challenger
+    at: 2026-08-31T17:35:51+08:00
+    source_uri: codex-agent://t001_arch_challenge#approved-v2
   review: null
   acceptance: null
   risk: null
