@@ -1,7 +1,7 @@
 id: T001
 kind: governance
 contract_version: 1
-status: IMPLEMENTING
+status: CHANGES_REQUESTED
 
 goal: Close the two known merge-governance gaps before the repository is used for product development.
 current_behavior: Pull-request checks validate the changed Task Contract but do not explicitly require MERGE_READY, and GitHub Environments still permit administrator bypass while the configuration script reports success.
