@@ -1,7 +1,7 @@
 id: T001
 kind: governance
 contract_version: 1
-status: CHANGES_REQUESTED
+status: IMPLEMENTING
 
 goal: Close the two known merge-governance gaps before the repository is used for product development.
 current_behavior: Pull-request checks validate the changed Task Contract but do not explicitly require MERGE_READY, and GitHub Environments still permit administrator bypass while the configuration script reports success.
@@ -102,6 +102,7 @@ approvals:
 
 proposed_state_changes:
   - Record integration_candidate_sha versus pull-request HEAD binding as the next blocking governance task before product development.
+  - Repair the state map so Reviewer CHANGES_REQUESTED is reachable from review-related main states.
 
 governance_baseline:
   commit: f5f93e9b03c73442bfa5b647748183424aa7ad20
