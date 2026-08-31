@@ -1,7 +1,7 @@
 id: T001
 kind: governance
 contract_version: 1
-status: ACCEPTING
+status: INTEGRATION_PREPARING
 
 goal: Close the two known merge-governance gaps before the repository is used for product development.
 current_behavior: Pull-request checks validate the changed Task Contract but do not explicitly require MERGE_READY, and GitHub Environments still permit administrator bypass while the configuration script reports success.
@@ -100,7 +100,10 @@ approvals:
     by: t001-reviewer
     at: 2026-08-31T17:19:53+08:00
     source_uri: codex-agent://t001_reviewer#approved-5e85046
-  acceptance: null
+  acceptance:
+    by: t001-verifier
+    at: 2026-08-31T17:20:43+08:00
+    source_uri: codex-agent://t001_verifier#pass-5e85046
   risk: null
 
 proposed_state_changes:
@@ -118,5 +121,9 @@ evidence_refs:
     valid: true
   - type: review
     path: docs/engineering/evidence/T001/review.yaml
+    subject_sha: 5e85046e59953516b7d0898223dc3b2e2fa5c655
+    valid: true
+  - type: acceptance
+    path: docs/engineering/evidence/T001/acceptance.yaml
     subject_sha: 5e85046e59953516b7d0898223dc3b2e2fa5c655
     valid: true
