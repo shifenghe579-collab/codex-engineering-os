@@ -1,11 +1,11 @@
 id: T001
 kind: governance
 contract_version: 1
-status: DESIGNING
+status: READY
 
 goal: Close the two known merge-governance gaps before the repository is used for product development.
-current_behavior: Pull-request checks validate the changed Task Contract but do not explicitly require MERGE_READY, and GitHub Environments still permit administrator bypass without a documented manual hardening step.
-expected_behavior: Every substantive pull request is rejected unless its single changed Task Contract is MERGE_READY, and repository setup clearly requires the owner to disable administrator bypass in all approval environments through GitHub settings.
+current_behavior: Pull-request checks validate the changed Task Contract but do not explicitly require MERGE_READY, and GitHub Environments still permit administrator bypass while the configuration script reports success.
+expected_behavior: Every implementation-substantive pull request is rejected unless its single changed Task Contract is exactly MERGE_READY; lifecycle-only bookkeeping remains possible through legal state transitions; and repository setup fails closed until administrator bypass is disabled and verified for every approval environment.
 non_goals:
   - Automate a GitHub Environment setting that is not exposed by the available REST API.
   - Change the single-owner reviewer or prevent_self_review policy.
@@ -14,11 +14,15 @@ invariants:
   - Pull requests must still change exactly one formal Task Contract.
   - Existing schema, scope, transition, evidence, and risk checks remain mandatory.
   - Local validation without a base ref remains usable for repository-wide checks.
+  - Post-merge Task, Evidence, and HANDOFF lifecycle bookkeeping remains possible without pretending to be a new implementation candidate.
 acceptance_criteria:
-  - A substantive pull request whose changed Task Contract is READY or any other non-MERGE_READY state fails CI with a clear error.
-  - A valid substantive pull request whose changed Task Contract is MERGE_READY passes the new state gate.
-  - Automated tests cover both rejection and acceptance behavior at the CI entry-point boundary.
-  - GitHub setup documentation names all three environments and the exact manual administrator-bypass hardening action.
+  - An implementation-substantive pull request whose changed Task Contract is READY or MERGED fails CI with a clear error.
+  - A valid implementation-substantive pull request whose changed Task Contract is exactly MERGE_READY passes the new state gate.
+  - A lifecycle-only MERGE_READY to MERGED Task transition remains legal and is not rejected by the implementation-state gate.
+  - Automated tests cover READY rejection, MERGE_READY acceptance, MERGED rejection, lifecycle-only transition acceptance, and non-PR repository validation at the CI entry-point boundary.
+  - The GitHub configuration script exits nonzero, names every offending environment, and does not report success while any approval environment permits administrator bypass.
+  - GitHub setup documentation names all three environments, the exact manual administrator-bypass hardening action, and a read-only verification command.
+  - Live GitHub API evidence reports can_admins_bypass=false for product-approval, governance-approval, and production.
   - The complete engineering verification suite and GitHub required checks pass on the integration candidate.
 open_questions: []
 
@@ -27,6 +31,7 @@ scope:
     - docs/engineering/tasks/T001.yaml
     - docs/engineering/evidence/T001/**
     - scripts/engineering/ci_check.py
+    - scripts/engineering/configure-github.ps1
     - scripts/engineering/tests/test_os_core.py
     - docs/engineering/GITHUB_SETUP.md
     - docs/engineering/HANDOFF.md
@@ -50,10 +55,11 @@ risk:
   triggers:
     - major_infrastructure
 
-technical_direction: Add one explicit PR-only MERGE_READY assertion in ci_check.py, exercise it through main() with temporary repositories, and document the UI-only Environment setting without weakening any existing gate.
+technical_direction: In ci_check.py, distinguish implementation-substantive paths from Task, Evidence, and HANDOFF lifecycle bookkeeping and require exact MERGE_READY only for implementation-substantive pull requests. Exercise the behavior through main() with temporary Git repositories. In configure-github.ps1, GET all configured Environments after PUT and fail closed with their names unless can_admins_bypass is false; document the supported UI action and read-only verification without using undocumented APIs.
 execution_plan:
   - Obtain an independent architecture challenge on the minimal design.
   - Dispatch the approved contract to Worker for a surgical implementation and tests.
+  - Have the repository owner disable administrator bypass through GitHub settings, then capture read-only API evidence.
   - Bind implementation evidence to the implementation commit.
   - Obtain independent Reviewer and Verifier evidence on the same commit.
   - Build one integration candidate, rerun all required checks, and request user-controlled GitHub approvals.
@@ -86,12 +92,16 @@ approvals:
     by: product-authority
     at: 2026-08-31T15:57:28+08:00
     source_uri: codex://thread/current#continue-t001
-  architecture: null
+  architecture:
+    by: t001-architecture-challenger
+    at: 2026-08-31T16:26:48+08:00
+    source_uri: codex-agent://t001_arch_challenge#approved
   review: null
   acceptance: null
   risk: null
 
-proposed_state_changes: []
+proposed_state_changes:
+  - Record integration_candidate_sha versus pull-request HEAD binding as the next blocking governance task before product development.
 
 governance_baseline:
   commit: f5f93e9b03c73442bfa5b647748183424aa7ad20
