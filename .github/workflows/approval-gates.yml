@@ -1,0 +1,44 @@
+name: Approval Gates
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  classify:
+    name: engineering-os/classify-change
+    runs-on: ubuntu-latest
+    outputs:
+      governance: ${{ steps.classify.outputs.governance }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - id: classify
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/engineering/classify_changes.py --base-ref "$BASE_SHA" --head-ref "$HEAD_SHA"
+
+  product-approval:
+    name: engineering-os/product-approval
+    needs: classify
+    runs-on: ubuntu-latest
+    environment: product-approval
+    steps:
+      - run: echo "Product Authority approved this candidate."
+
+  governance-approval:
+    name: engineering-os/governance-approval
+    needs: classify
+    if: needs.classify.outputs.governance == 'true'
+    runs-on: ubuntu-latest
+    environment: governance-approval
+    steps:
+      - run: echo "Governance owner approved this governance change."

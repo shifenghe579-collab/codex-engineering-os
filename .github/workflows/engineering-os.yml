@@ -1,0 +1,90 @@
+name: Engineering OS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate-engine-tests:
+    name: engineering-os/gate-engine-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s scripts/engineering/tests -v
+
+  contract-risk:
+    name: engineering-os/contract-risk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python scripts/engineering/ci_check.py
+
+  consistency-evidence:
+    name: engineering-os/consistency-evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Validate pull request scope and transition
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/engineering/ci_check.py --base-ref "$BASE_SHA" --head-ref "$HEAD_SHA"
+      - name: Validate repository state
+        if: github.event_name != 'pull_request'
+        run: python scripts/engineering/ci_check.py
+
+  project-verification:
+    name: engineering-os/project-verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m compileall -q scripts/engineering
+
+  final-gate:
+    name: engineering-os/final-gate
+    if: always()
+    needs:
+      - gate-engine-tests
+      - contract-risk
+      - consistency-evidence
+      - project-verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every machine gate
+        env:
+          GATE_ENGINE_TESTS: ${{ needs.gate-engine-tests.result }}
+          CONTRACT_RISK: ${{ needs.contract-risk.result }}
+          CONSISTENCY_EVIDENCE: ${{ needs.consistency-evidence.result }}
+          PROJECT_VERIFICATION: ${{ needs.project-verification.result }}
+        run: |
+          test "$GATE_ENGINE_TESTS" = success
+          test "$CONTRACT_RISK" = success
+          test "$CONSISTENCY_EVIDENCE" = success
+          test "$PROJECT_VERIFICATION" = success

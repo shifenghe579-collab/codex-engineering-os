@@ -1,0 +1,48 @@
+version: 1
+risk_lanes:
+  R0:
+    required:
+      - contract
+      - scope
+      - basic_verify
+  R1:
+    required:
+      - contract
+      - scope
+      - implementation_verify
+      - review
+      - ci
+  R2:
+    required:
+      - contract_approval
+      - architecture_challenge
+      - acceptance_plan
+      - implementation_verify
+      - independent_review
+      - independent_acceptance
+      - integration_verify
+      - ci
+  R3:
+    required:
+      - contract_approval
+      - architecture_challenge
+      - acceptance_plan
+      - implementation_verify
+      - independent_review
+      - second_technical_review
+      - independent_acceptance
+      - integration_verify
+      - rollback_plan
+      - human_risk_approval
+      - production_permission_gate
+      - ci
+commands:
+  gate_engine_tests:
+    argv:
+      - "{python}"
+      - -m
+      - unittest
+      - discover
+      - -s
+      - scripts/engineering/tests
+      - -v

@@ -1,0 +1,19 @@
+version: 1
+ranks:
+  R0: 0
+  R1: 1
+  R2: 2
+  R3: 3
+floors:
+  authentication: R2
+  authorization: R2
+  database_schema: R2
+  migration: R2
+  payment: R2
+  concurrency: R2
+  public_api: R2
+  core_cross_module_state: R2
+  major_dependency: R2
+  major_infrastructure: R2
+  production_data_delete: R3
+  irreversible_production_operation: R3

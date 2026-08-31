@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Evidence Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task", "contract_version", "subject_sha", "generated_at", "checks"],
+  "properties": {
+    "task": {"type": "string", "pattern": "^T[0-9]{3,}$"},
+    "contract_version": {"type": "integer", "minimum": 1},
+    "subject_sha": {"type": "string", "minLength": 7},
+    "generated_at": {"type": "string"},
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate_id", "provenance", "runner", "command", "timestamp", "exit_code", "artifact_digest", "source_uri", "unverified"],
+        "properties": {
+          "gate_id": {"type": "string"},
+          "provenance": {"enum": ["worker", "reviewer", "verifier", "ci", "human"]},
+          "runner": {"type": "string"},
+          "command": {"type": "array", "items": {"type": "string"}},
+          "timestamp": {"type": "string"},
+          "exit_code": {"type": "integer"},
+          "artifact_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+          "source_uri": {"type": ["string", "null"]},
+          "unverified": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

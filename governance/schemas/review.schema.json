@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Independent Review Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task", "contract_version", "subject_sha", "reviewer", "mode", "verdict", "blocking_findings", "non_blocking_findings", "reviewed_at"],
+  "properties": {
+    "task": {"type": "string", "pattern": "^T[0-9]{3,}$"},
+    "contract_version": {"type": "integer", "minimum": 1},
+    "subject_sha": {"type": "string", "minLength": 7},
+    "reviewer": {"type": "string", "minLength": 1},
+    "mode": {"enum": ["standard", "critical"]},
+    "verdict": {"enum": ["APPROVED", "CHANGES_REQUESTED", "BLOCKED"]},
+    "blocking_findings": {"type": "array", "items": {"type": "string"}},
+    "non_blocking_findings": {"type": "array", "items": {"type": "string"}},
+    "reviewed_at": {"type": "string"}
+  }
+}

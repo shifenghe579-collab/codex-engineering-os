@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Behavioral Acceptance Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task", "contract_version", "subject_sha", "verifier", "plan_ref", "verdict", "scenarios", "verified_at"],
+  "properties": {
+    "task": {"type": "string", "pattern": "^T[0-9]{3,}$"},
+    "contract_version": {"type": "integer", "minimum": 1},
+    "subject_sha": {"type": "string", "minLength": 7},
+    "verifier": {"type": "string", "minLength": 1},
+    "plan_ref": {"type": "string", "minLength": 1},
+    "verdict": {"enum": ["PASS", "FAIL", "BLOCKED"]},
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "expected", "actual", "result", "evidence_ref"],
+        "properties": {
+          "name": {"type": "string"},
+          "expected": {"type": "string"},
+          "actual": {"type": "string"},
+          "result": {"enum": ["PASS", "FAIL", "BLOCKED"]},
+          "evidence_ref": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "verified_at": {"type": "string"}
+  }
+}

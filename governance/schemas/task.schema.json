@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/codex-engineering-os/task.schema.json",
+  "title": "Codex Engineering OS Task Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id", "kind", "contract_version", "status", "goal", "current_behavior",
+    "expected_behavior", "non_goals", "invariants", "acceptance_criteria",
+    "open_questions", "scope", "change_impact", "risk", "technical_direction",
+    "execution_plan", "dispatch", "git", "approvals", "proposed_state_changes",
+    "governance_baseline", "evidence_refs"
+  ],
+  "properties": {
+    "id": {"type": "string", "pattern": "^T[0-9]{3,}$"},
+    "kind": {"enum": ["standard", "governance"]},
+    "contract_version": {"type": "integer", "minimum": 1},
+    "status": {
+      "enum": [
+        "CLARIFYING", "DESIGNING", "READY", "IMPLEMENTING", "VERIFYING",
+        "REVIEWING", "ACCEPTING", "INTEGRATION_PREPARING",
+        "INTEGRATION_VERIFYING", "MERGE_READY", "MERGED",
+        "POST_MERGE_VERIFYING", "DEVELOPMENT_COMPLETE", "BLOCKED",
+        "CHANGES_REQUESTED", "CONTRACT_CHANGE", "REASSESSING", "CANCELLED"
+      ]
+    },
+    "goal": {"type": "string", "minLength": 1},
+    "current_behavior": {"type": "string"},
+    "expected_behavior": {"type": "string", "minLength": 1},
+    "non_goals": {"type": "array", "items": {"type": "string"}},
+    "invariants": {"type": "array", "items": {"type": "string"}},
+    "acceptance_criteria": {"type": "array", "items": {"type": "string"}},
+    "open_questions": {"type": "array", "items": {"type": "string"}},
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed", "forbidden"],
+      "properties": {
+        "allowed": {"type": "array", "items": {"type": "string"}},
+        "forbidden": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "change_impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spec", "architecture", "project", "adr", "tests", "runtime"],
+      "properties": {
+        "spec": {"type": "boolean"},
+        "architecture": {"type": "boolean"},
+        "project": {"type": "boolean"},
+        "adr": {"type": "boolean"},
+        "tests": {"type": "boolean"},
+        "runtime": {"type": "boolean"}
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["classified", "floor", "triggers"],
+      "properties": {
+        "classified": {"enum": ["R0", "R1", "R2", "R3"]},
+        "floor": {"enum": ["R0", "R1", "R2", "R3"]},
+        "triggers": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "technical_direction": {"type": "string"},
+    "execution_plan": {"type": "array", "items": {"type": "string"}},
+    "dispatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "mode", "required_environment", "required_gates"],
+      "properties": {
+        "profile": {"type": "string"},
+        "mode": {"enum": ["worktree", "local-read-only", "local"]},
+        "required_environment": {"type": "array", "items": {"type": "string"}},
+        "required_gates": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_sha", "implementation_sha", "integration_candidate_sha"],
+      "properties": {
+        "base_sha": {"type": ["string", "null"]},
+        "implementation_sha": {"type": ["string", "null"]},
+        "integration_candidate_sha": {"type": ["string", "null"]}
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement", "architecture", "review", "acceptance", "risk"],
+      "properties": {
+        "requirement": {"$ref": "#/$defs/approval"},
+        "architecture": {"$ref": "#/$defs/approval"},
+        "review": {"$ref": "#/$defs/approval"},
+        "acceptance": {"$ref": "#/$defs/approval"},
+        "risk": {"$ref": "#/$defs/approval"}
+      }
+    },
+    "proposed_state_changes": {"type": "array", "items": {"type": "string"}},
+    "governance_baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "digest"],
+      "properties": {
+        "commit": {"type": ["string", "null"]},
+        "digest": {"type": ["string", "null"]}
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "path", "subject_sha", "valid"],
+        "properties": {
+          "type": {"enum": ["implementation", "review", "acceptance", "integration", "release"]},
+          "path": {"type": "string"},
+          "subject_sha": {"type": "string"},
+          "valid": {"type": "boolean"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "approval": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["by", "at", "source_uri"],
+          "properties": {
+            "by": {"type": "string", "minLength": 1},
+            "at": {"type": "string", "minLength": 1},
+            "source_uri": {"type": "string", "minLength": 1}
+          }
+        }
+      ]
+    }
+  }
+}

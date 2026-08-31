@@ -1,0 +1,61 @@
+id: T000
+kind: standard
+contract_version: 1
+status: CLARIFYING
+
+goal: Replace with a measurable goal.
+current_behavior: ""
+expected_behavior: Replace with the confirmed expected behavior.
+non_goals: []
+invariants: []
+acceptance_criteria: []
+open_questions:
+  - Replace or remove this question before READY.
+
+scope:
+  allowed:
+    - docs/engineering/tasks/T000.yaml
+  forbidden:
+    - governance/**
+
+change_impact:
+  spec: false
+  architecture: false
+  project: false
+  adr: false
+  tests: false
+  runtime: false
+
+risk:
+  classified: R0
+  floor: R0
+  triggers: []
+
+technical_direction: ""
+execution_plan: []
+
+dispatch:
+  profile: worker-standard
+  mode: worktree
+  required_environment: []
+  required_gates: []
+
+git:
+  base_sha: null
+  implementation_sha: null
+  integration_candidate_sha: null
+
+approvals:
+  requirement: null
+  architecture: null
+  review: null
+  acceptance: null
+  risk: null
+
+proposed_state_changes: []
+
+governance_baseline:
+  commit: null
+  digest: null
+
+evidence_refs: []
