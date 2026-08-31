@@ -1,11 +1,12 @@
 param(
     [Parameter(Mandatory = $true)][string]$Owner,
-    [Parameter(Mandatory = $true)][string]$Repository
+    [Parameter(Mandatory = $true)][string]$Repository,
+    [string]$Gh = 'gh'
 )
 
 $ErrorActionPreference = 'Stop'
 
-if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+if (-not (Get-Command $Gh -ErrorAction SilentlyContinue)) {
     throw 'GitHub CLI (gh) is required.'
 }
 
@@ -19,7 +20,7 @@ function Invoke-GhJson {
     $TemporaryFile = New-TemporaryFile
     try {
         $Body | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $TemporaryFile -Encoding utf8
-        gh api --method $Method $Endpoint --input $TemporaryFile
+        & $Gh api --method $Method $Endpoint --input $TemporaryFile
         if ($LASTEXITCODE -ne 0) {
             throw "GitHub API request failed: $Method $Endpoint"
         }
@@ -29,7 +30,7 @@ function Invoke-GhJson {
     }
 }
 
-$UserId = gh api "users/$Owner" --jq '.id'
+$UserId = & $Gh api "users/$Owner" --jq '.id'
 if ($LASTEXITCODE -ne 0 -or -not $UserId) {
     throw "Unable to resolve GitHub user: $Owner"
 }
@@ -96,7 +97,7 @@ $RulesetBody = @{
     )
 }
 
-$ExistingRulesets = gh api "repos/$Owner/$Repository/rulesets" | ConvertFrom-Json
+$ExistingRulesets = & $Gh api "repos/$Owner/$Repository/rulesets" | ConvertFrom-Json
 $Existing = $ExistingRulesets | Where-Object { $_.name -eq 'codex-engineering-os-main' } | Select-Object -First 1
 if ($Existing) {
     Invoke-GhJson -Method PUT -Endpoint "repos/$Owner/$Repository/rulesets/$($Existing.id)" -Body $RulesetBody
