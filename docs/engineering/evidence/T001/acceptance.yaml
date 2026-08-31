@@ -1,6 +1,6 @@
 task: T001
-contract_version: 1
-subject_sha: 5e85046e59953516b7d0898223dc3b2e2fa5c655
+contract_version: 2
+subject_sha: 70ae192daa4f446e05eb9c87e548d0723194134a
 verifier: t001-verifier
 plan_ref: docs/engineering/tasks/T001.yaml#acceptance_criteria
 verdict: PASS
@@ -40,4 +40,9 @@ scenarios:
     actual: product-approval=false, governance-approval=false, production=false.
     result: PASS
     evidence_ref: https://github.com/shifenghe579-collab/codex-engineering-os/settings/environments
-verified_at: 2026-08-31T17:20:43+08:00
+  - name: Approval Gates classifier on GitHub Runner
+    expected: Dependencies install, classification succeeds, and both approval jobs reach Environment gates.
+    actual: Run 33379431147 completed setup, dependency installation, and classification successfully; product and governance approval jobs entered waiting.
+    result: PASS
+    evidence_ref: https://github.com/shifenghe579-collab/codex-engineering-os/actions/runs/33379431147
+verified_at: 2026-08-31T17:51:45+08:00
