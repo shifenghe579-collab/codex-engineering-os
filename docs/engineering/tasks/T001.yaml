@@ -1,11 +1,11 @@
 id: T001
 kind: governance
-contract_version: 1
-status: MERGE_READY
+contract_version: 2
+status: CLARIFYING
 
 goal: Close the two known merge-governance gaps before the repository is used for product development.
-current_behavior: Pull-request checks validate the changed Task Contract but do not explicitly require MERGE_READY, and GitHub Environments still permit administrator bypass while the configuration script reports success.
-expected_behavior: Every implementation-substantive pull request is rejected unless its single changed Task Contract is exactly MERGE_READY; lifecycle-only bookkeeping remains possible through legal state transitions; and repository setup fails closed until administrator bypass is disabled and verified for every approval environment.
+current_behavior: Pull-request checks did not explicitly require MERGE_READY, GitHub Environments permitted administrator bypass while configuration reported success, and the Approval Gates classifier fails before human approval because its workflow does not install PyYAML.
+expected_behavior: Every implementation-substantive pull request is rejected unless its single changed Task Contract is exactly MERGE_READY; lifecycle-only bookkeeping remains possible through legal state transitions; repository setup fails closed until administrator bypass is disabled and verified for every approval environment; and Approval Gates installs declared Python dependencies before classifying changes.
 non_goals:
   - Automate a GitHub Environment setting that is not exposed by the available REST API.
   - Change the single-owner reviewer or prevent_self_review policy.
@@ -23,6 +23,7 @@ acceptance_criteria:
   - The GitHub configuration script exits nonzero, names every offending environment, and does not report success while any approval environment permits administrator bypass.
   - GitHub setup documentation names all three environments, the exact manual administrator-bypass hardening action, and a read-only verification command.
   - Live GitHub API evidence reports can_admins_bypass=false for product-approval, governance-approval, and production.
+  - The Approval Gates classify-change job installs requirements.txt and reaches the Environment approval jobs without a missing-yaml import failure.
   - The complete engineering verification suite and GitHub required checks pass on the integration candidate.
 open_questions: []
 
@@ -33,6 +34,7 @@ scope:
     - scripts/engineering/ci_check.py
     - scripts/engineering/configure-github.ps1
     - scripts/engineering/tests/test_os_core.py
+    - .github/workflows/approval-gates.yml
     - docs/engineering/GITHUB_SETUP.md
     - docs/engineering/HANDOFF.md
   forbidden:
@@ -55,9 +57,10 @@ risk:
   triggers:
     - major_infrastructure
 
-technical_direction: In ci_check.py, distinguish implementation-substantive paths from Task, Evidence, and HANDOFF lifecycle bookkeeping and require exact MERGE_READY only for implementation-substantive pull requests. Exercise the behavior through main() with temporary Git repositories. In configure-github.ps1, GET all configured Environments after PUT and fail closed with their names unless can_admins_bypass is false; document the supported UI action and read-only verification without using undocumented APIs.
+technical_direction: In ci_check.py, distinguish implementation-substantive paths from Task, Evidence, and HANDOFF lifecycle bookkeeping and require exact MERGE_READY only for implementation-substantive pull requests. Exercise the behavior through main() with temporary Git repositories. In configure-github.ps1, GET all configured Environments after PUT and fail closed with their names unless can_admins_bypass is false; document the supported UI action and read-only verification without using undocumented APIs. In approval-gates.yml, install requirements.txt after Python setup and before running classify_changes.py.
 execution_plan:
   - Obtain an independent architecture challenge on the minimal design.
+  - Install declared Python dependencies in the Approval Gates classifier job.
   - Dispatch the approved contract to Worker for a surgical implementation and tests.
   - Have the repository owner disable administrator bypass through GitHub settings, then capture read-only API evidence.
   - Bind implementation evidence to the implementation commit.
@@ -84,26 +87,14 @@ dispatch:
 
 git:
   base_sha: f5f93e9b03c73442bfa5b647748183424aa7ad20
-  implementation_sha: 5e85046e59953516b7d0898223dc3b2e2fa5c655
-  integration_candidate_sha: a2cca6afbd19cfa253f01450d666661471449ed9
+  implementation_sha: null
+  integration_candidate_sha: null
 
 approvals:
-  requirement:
-    by: product-authority
-    at: 2026-08-31T15:57:28+08:00
-    source_uri: codex://thread/current#continue-t001
-  architecture:
-    by: t001-architecture-challenger
-    at: 2026-08-31T16:26:48+08:00
-    source_uri: codex-agent://t001_arch_challenge#approved
-  review:
-    by: t001-reviewer
-    at: 2026-08-31T17:19:53+08:00
-    source_uri: codex-agent://t001_reviewer#approved-5e85046
-  acceptance:
-    by: t001-verifier
-    at: 2026-08-31T17:20:43+08:00
-    source_uri: codex-agent://t001_verifier#pass-5e85046
+  requirement: null
+  architecture: null
+  review: null
+  acceptance: null
   risk: null
 
 proposed_state_changes:
@@ -114,20 +105,4 @@ governance_baseline:
   commit: f5f93e9b03c73442bfa5b647748183424aa7ad20
   digest: sha256:2c2b646e0c7e0346285acc290563efbbd447223cdc14027310a28acb2708d8c4
 
-evidence_refs:
-  - type: implementation
-    path: docs/engineering/evidence/T001/implementation.yaml
-    subject_sha: 5e85046e59953516b7d0898223dc3b2e2fa5c655
-    valid: true
-  - type: review
-    path: docs/engineering/evidence/T001/review.yaml
-    subject_sha: 5e85046e59953516b7d0898223dc3b2e2fa5c655
-    valid: true
-  - type: acceptance
-    path: docs/engineering/evidence/T001/acceptance.yaml
-    subject_sha: 5e85046e59953516b7d0898223dc3b2e2fa5c655
-    valid: true
-  - type: integration
-    path: docs/engineering/evidence/T001/integration.yaml
-    subject_sha: a2cca6afbd19cfa253f01450d666661471449ed9
-    valid: true
+evidence_refs: []
