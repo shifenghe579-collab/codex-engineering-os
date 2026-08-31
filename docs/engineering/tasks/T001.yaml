@@ -1,0 +1,100 @@
+id: T001
+kind: governance
+contract_version: 1
+status: DESIGNING
+
+goal: Close the two known merge-governance gaps before the repository is used for product development.
+current_behavior: Pull-request checks validate the changed Task Contract but do not explicitly require MERGE_READY, and GitHub Environments still permit administrator bypass without a documented manual hardening step.
+expected_behavior: Every substantive pull request is rejected unless its single changed Task Contract is MERGE_READY, and repository setup clearly requires the owner to disable administrator bypass in all approval environments through GitHub settings.
+non_goals:
+  - Automate a GitHub Environment setting that is not exposed by the available REST API.
+  - Change the single-owner reviewer or prevent_self_review policy.
+  - Redesign the task state machine or risk model.
+invariants:
+  - Pull requests must still change exactly one formal Task Contract.
+  - Existing schema, scope, transition, evidence, and risk checks remain mandatory.
+  - Local validation without a base ref remains usable for repository-wide checks.
+acceptance_criteria:
+  - A substantive pull request whose changed Task Contract is READY or any other non-MERGE_READY state fails CI with a clear error.
+  - A valid substantive pull request whose changed Task Contract is MERGE_READY passes the new state gate.
+  - Automated tests cover both rejection and acceptance behavior at the CI entry-point boundary.
+  - GitHub setup documentation names all three environments and the exact manual administrator-bypass hardening action.
+  - The complete engineering verification suite and GitHub required checks pass on the integration candidate.
+open_questions: []
+
+scope:
+  allowed:
+    - docs/engineering/tasks/T001.yaml
+    - docs/engineering/evidence/T001/**
+    - scripts/engineering/ci_check.py
+    - scripts/engineering/tests/test_os_core.py
+    - docs/engineering/GITHUB_SETUP.md
+    - docs/engineering/HANDOFF.md
+  forbidden:
+    - governance/**
+    - .github/**
+    - .codex/**
+    - AGENTS.md
+
+change_impact:
+  spec: false
+  architecture: false
+  project: false
+  adr: false
+  tests: true
+  runtime: false
+
+risk:
+  classified: R2
+  floor: R2
+  triggers:
+    - major_infrastructure
+
+technical_direction: Add one explicit PR-only MERGE_READY assertion in ci_check.py, exercise it through main() with temporary repositories, and document the UI-only Environment setting without weakening any existing gate.
+execution_plan:
+  - Obtain an independent architecture challenge on the minimal design.
+  - Dispatch the approved contract to Worker for a surgical implementation and tests.
+  - Bind implementation evidence to the implementation commit.
+  - Obtain independent Reviewer and Verifier evidence on the same commit.
+  - Build one integration candidate, rerun all required checks, and request user-controlled GitHub approvals.
+
+dispatch:
+  profile: worker-governance
+  mode: worktree
+  required_environment:
+    - local-test
+    - github-actions
+    - product-approval
+    - governance-approval
+  required_gates:
+    - contract_approval
+    - architecture_challenge
+    - acceptance_plan
+    - implementation_verify
+    - independent_review
+    - independent_acceptance
+    - integration_verify
+    - ci
+
+git:
+  base_sha: f5f93e9b03c73442bfa5b647748183424aa7ad20
+  implementation_sha: null
+  integration_candidate_sha: null
+
+approvals:
+  requirement:
+    by: product-authority
+    at: 2026-08-31T15:57:28+08:00
+    source_uri: codex://thread/current#continue-t001
+  architecture: null
+  review: null
+  acceptance: null
+  risk: null
+
+proposed_state_changes: []
+
+governance_baseline:
+  commit: f5f93e9b03c73442bfa5b647748183424aa7ad20
+  digest: sha256:2c2b646e0c7e0346285acc290563efbbd447223cdc14027310a28acb2708d8c4
+
+evidence_refs: []
