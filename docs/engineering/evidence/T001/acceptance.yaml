@@ -1,0 +1,48 @@
+task: T001
+contract_version: 2
+subject_sha: 70ae192daa4f446e05eb9c87e548d0723194134a
+verifier: t001-verifier
+plan_ref: docs/engineering/tasks/T001.yaml#acceptance_criteria
+verdict: PASS
+scenarios:
+  - name: Implementation pull request in READY
+    expected: CI rejects the pull request and requires MERGE_READY.
+    actual: Exit 1 with a clear MERGE_READY state error.
+    result: PASS
+    evidence_ref: codex-agent://t001_verifier#ready-rejected
+  - name: Implementation pull request in MERGE_READY
+    expected: The state gate passes.
+    actual: Exit 0 with repository validation passing.
+    result: PASS
+    evidence_ref: codex-agent://t001_verifier#merge-ready-accepted
+  - name: Implementation pull request in MERGED
+    expected: CI rejects the pull request.
+    actual: Exit 1 with a clear MERGE_READY state error.
+    result: PASS
+    evidence_ref: codex-agent://t001_verifier#merged-rejected
+  - name: Lifecycle-only MERGE_READY to MERGED transition
+    expected: Lifecycle bookkeeping remains possible.
+    actual: Exit 0 with transition validation passing.
+    result: PASS
+    evidence_ref: codex-agent://t001_verifier#lifecycle-accepted
+  - name: Same-version acceptance criteria rewrite
+    expected: CI rejects the semantic contract rewrite.
+    actual: Exit 1 identifying acceptance_criteria as changed without a version increase.
+    result: PASS
+    evidence_ref: codex-agent://t001_verifier#contract-protected
+  - name: GitHub configuration fail-closed behavior
+    expected: Bypass-enabled mocks fail and all-false mocks succeed.
+    actual: All bypass-enabled environments were listed with nonzero exit; all-false returned success.
+    result: PASS
+    evidence_ref: codex-agent://t001_verifier#configure-fail-closed
+  - name: Live GitHub Environment protection
+    expected: All three Environments report can_admins_bypass=false.
+    actual: product-approval=false, governance-approval=false, production=false.
+    result: PASS
+    evidence_ref: https://github.com/shifenghe579-collab/codex-engineering-os/settings/environments
+  - name: Approval Gates classifier on GitHub Runner
+    expected: Dependencies install, classification succeeds, and both approval jobs reach Environment gates.
+    actual: Run 33379431147 completed setup, dependency installation, and classification successfully; product and governance approval jobs entered waiting.
+    result: PASS
+    evidence_ref: https://github.com/shifenghe579-collab/codex-engineering-os/actions/runs/33379431147
+verified_at: 2026-08-31T17:51:45+08:00

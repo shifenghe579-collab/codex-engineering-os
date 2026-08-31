@@ -1,0 +1,21 @@
+task: T001
+contract_version: 2
+subject_sha: a6dd0c177e7ed760245a190da438d626a8a99273
+generated_at: 2026-08-31T09:53:48.665728+00:00
+checks:
+  - gate_id: gate_engine_tests
+    provenance: ci
+    runner: Windows 11 / Python 3.12.13
+    command:
+      - C:\Users\DELL\Documents\ChatGPT\多agent协作\.venv\Scripts\python.exe
+      - -m
+      - unittest
+      - discover
+      - -s
+      - scripts/engineering/tests
+      - -v
+    timestamp: 2026-08-31T09:53:48.665728+00:00
+    exit_code: 0
+    artifact_digest: sha256:1e3b51482cc43fff3226a5b9811275924cbb65a49c8061ee423bf0dd94572ef1
+    source_uri: codex://local/T001/v2-integration-verify
+    unverified: []

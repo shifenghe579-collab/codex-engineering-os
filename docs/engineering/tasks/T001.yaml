@@ -1,0 +1,135 @@
+id: T001
+kind: governance
+contract_version: 2
+status: MERGE_READY
+
+goal: Close the two known merge-governance gaps before the repository is used for product development.
+current_behavior: Pull-request checks did not explicitly require MERGE_READY, GitHub Environments permitted administrator bypass while configuration reported success, and the Approval Gates classifier fails before human approval because its workflow does not install PyYAML.
+expected_behavior: Every implementation-substantive pull request is rejected unless its single changed Task Contract is exactly MERGE_READY; lifecycle-only bookkeeping remains possible through legal state transitions; repository setup fails closed until administrator bypass is disabled and verified for every approval environment; and Approval Gates installs declared Python dependencies before classifying changes.
+non_goals:
+  - Automate a GitHub Environment setting that is not exposed by the available REST API.
+  - Change the single-owner reviewer or prevent_self_review policy.
+  - Redesign the task state machine or risk model.
+invariants:
+  - Pull requests must still change exactly one formal Task Contract.
+  - Existing schema, scope, transition, evidence, and risk checks remain mandatory.
+  - Local validation without a base ref remains usable for repository-wide checks.
+  - Post-merge Task, Evidence, and HANDOFF lifecycle bookkeeping remains possible without pretending to be a new implementation candidate.
+acceptance_criteria:
+  - An implementation-substantive pull request whose changed Task Contract is READY or MERGED fails CI with a clear error.
+  - A valid implementation-substantive pull request whose changed Task Contract is exactly MERGE_READY passes the new state gate.
+  - A lifecycle-only MERGE_READY to MERGED Task transition remains legal and is not rejected by the implementation-state gate.
+  - Automated tests cover READY rejection, MERGE_READY acceptance, MERGED rejection, lifecycle-only transition acceptance, and non-PR repository validation at the CI entry-point boundary.
+  - The GitHub configuration script exits nonzero, names every offending environment, and does not report success while any approval environment permits administrator bypass.
+  - GitHub setup documentation names all three environments, the exact manual administrator-bypass hardening action, and a read-only verification command.
+  - Live GitHub API evidence reports can_admins_bypass=false for product-approval, governance-approval, and production.
+  - The Approval Gates classify-change job installs requirements.txt and reaches the Environment approval jobs without a missing-yaml import failure.
+  - The complete engineering verification suite and GitHub required checks pass on the integration candidate.
+open_questions: []
+
+scope:
+  allowed:
+    - docs/engineering/tasks/T001.yaml
+    - docs/engineering/evidence/T001/**
+    - scripts/engineering/ci_check.py
+    - scripts/engineering/configure-github.ps1
+    - scripts/engineering/tests/test_os_core.py
+    - .github/workflows/approval-gates.yml
+    - docs/engineering/GITHUB_SETUP.md
+    - docs/engineering/HANDOFF.md
+  forbidden:
+    - governance/**
+    - .codex/**
+    - AGENTS.md
+
+change_impact:
+  spec: false
+  architecture: false
+  project: false
+  adr: false
+  tests: true
+  runtime: false
+
+risk:
+  classified: R2
+  floor: R2
+  triggers:
+    - major_infrastructure
+
+technical_direction: In ci_check.py, distinguish implementation-substantive paths from Task, Evidence, and HANDOFF lifecycle bookkeeping and require exact MERGE_READY only for implementation-substantive pull requests. Exercise the behavior through main() with temporary Git repositories. In configure-github.ps1, GET all configured Environments after PUT and fail closed with their names unless can_admins_bypass is false; document the supported UI action and read-only verification without using undocumented APIs. In approval-gates.yml, install requirements.txt after Python setup and before running classify_changes.py.
+execution_plan:
+  - Obtain an independent architecture challenge on the minimal design.
+  - Install declared Python dependencies in the Approval Gates classifier job.
+  - Dispatch the approved contract to Worker for a surgical implementation and tests.
+  - Have the repository owner disable administrator bypass through GitHub settings, then capture read-only API evidence.
+  - Bind implementation evidence to the implementation commit.
+  - Obtain independent Reviewer and Verifier evidence on the same commit.
+  - Build one integration candidate, rerun all required checks, and request user-controlled GitHub approvals.
+
+dispatch:
+  profile: worker-governance
+  mode: worktree
+  required_environment:
+    - local-test
+    - github-actions
+    - product-approval
+    - governance-approval
+  required_gates:
+    - contract_approval
+    - architecture_challenge
+    - acceptance_plan
+    - implementation_verify
+    - independent_review
+    - independent_acceptance
+    - integration_verify
+    - ci
+
+git:
+  base_sha: f5f93e9b03c73442bfa5b647748183424aa7ad20
+  implementation_sha: 70ae192daa4f446e05eb9c87e548d0723194134a
+  integration_candidate_sha: a6dd0c177e7ed760245a190da438d626a8a99273
+
+approvals:
+  requirement:
+    by: product-authority
+    at: 2026-08-31T17:35:51+08:00
+    source_uri: codex://thread/current#continue-t001-v2
+  architecture:
+    by: t001-architecture-challenger
+    at: 2026-08-31T17:35:51+08:00
+    source_uri: codex-agent://t001_arch_challenge#approved-v2
+  review:
+    by: t001-reviewer
+    at: 2026-08-31T17:50:55+08:00
+    source_uri: codex-agent://t001_reviewer#approved-v2-70ae192
+  acceptance:
+    by: t001-verifier
+    at: 2026-08-31T17:51:45+08:00
+    source_uri: codex-agent://t001_verifier#pass-v2-70ae192
+  risk: null
+
+proposed_state_changes:
+  - Record integration_candidate_sha versus pull-request HEAD binding as the next blocking governance task before product development.
+  - Repair the state map so Reviewer CHANGES_REQUESTED is reachable from review-related main states.
+
+governance_baseline:
+  commit: f5f93e9b03c73442bfa5b647748183424aa7ad20
+  digest: sha256:2c2b646e0c7e0346285acc290563efbbd447223cdc14027310a28acb2708d8c4
+
+evidence_refs:
+  - type: implementation
+    path: docs/engineering/evidence/T001/implementation.yaml
+    subject_sha: 70ae192daa4f446e05eb9c87e548d0723194134a
+    valid: true
+  - type: review
+    path: docs/engineering/evidence/T001/review.yaml
+    subject_sha: 70ae192daa4f446e05eb9c87e548d0723194134a
+    valid: true
+  - type: acceptance
+    path: docs/engineering/evidence/T001/acceptance.yaml
+    subject_sha: 70ae192daa4f446e05eb9c87e548d0723194134a
+    valid: true
+  - type: integration
+    path: docs/engineering/evidence/T001/integration.yaml
+    subject_sha: a6dd0c177e7ed760245a190da438d626a8a99273
+    valid: true

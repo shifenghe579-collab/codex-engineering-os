@@ -1,0 +1,10 @@
+task: T001
+contract_version: 2
+subject_sha: 70ae192daa4f446e05eb9c87e548d0723194134a
+reviewer: t001-reviewer
+mode: standard
+verdict: APPROVED
+blocking_findings: []
+non_blocking_findings:
+  - The dependency version is pinned but not hash-locked; the added PyPI execution surface is limited by read-only permissions and no Environment secrets.
+reviewed_at: 2026-08-31T17:50:55+08:00
