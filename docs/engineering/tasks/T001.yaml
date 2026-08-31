@@ -1,7 +1,7 @@
 id: T001
 kind: governance
 contract_version: 2
-status: MERGE_READY
+status: MERGED
 
 goal: Close the two known merge-governance gaps before the repository is used for product development.
 current_behavior: Pull-request checks did not explicitly require MERGE_READY, GitHub Environments permitted administrator bypass while configuration reported success, and the Approval Gates classifier fails before human approval because its workflow does not install PyYAML.
