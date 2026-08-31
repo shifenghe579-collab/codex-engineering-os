@@ -174,7 +174,13 @@ class CiEntryPointTests(unittest.TestCase):
             ]
         return task
 
-    def create_repo(self, base_status: str, head_status: str, substantive: bool) -> tuple[tempfile.TemporaryDirectory, Path, str]:
+    def create_repo(
+        self,
+        base_status: str,
+        head_status: str,
+        substantive: bool,
+        rewrite_acceptance: bool = False,
+    ) -> tuple[tempfile.TemporaryDirectory, Path, str]:
         temporary = tempfile.TemporaryDirectory()
         repo = Path(temporary.name)
         (repo / "governance").mkdir()
@@ -199,6 +205,8 @@ class CiEntryPointTests(unittest.TestCase):
 
         task = self.task_for_status(head_status, base_sha)
         task["git"]["base_sha"] = base_sha
+        if rewrite_acceptance:
+            task["acceptance_criteria"] = ["Rewritten acceptance semantics."]
         (repo / "docs/engineering/tasks/T001.yaml").write_text(json.dumps(task), encoding="utf-8")
         for evidence_type in ("implementation", "review", "acceptance", "integration"):
             (repo / f"docs/engineering/evidence/T001/{evidence_type}.yaml").write_text(
@@ -246,6 +254,36 @@ class CiEntryPointTests(unittest.TestCase):
         with temporary:
             result, output = self.run_ci(repo, base_sha)
         self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_ready_contract_semantics_cannot_change_without_new_version(self) -> None:
+        temporary, repo, base_sha = self.create_repo(
+            "READY",
+            "READY",
+            substantive=False,
+            rewrite_acceptance=True,
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn(
+            "Contract semantics changed without incrementing contract_version: acceptance_criteria",
+            output,
+        )
+
+    def test_merge_ready_contract_semantics_cannot_change_without_new_version(self) -> None:
+        temporary, repo, base_sha = self.create_repo(
+            "MERGE_READY",
+            "MERGE_READY",
+            substantive=False,
+            rewrite_acceptance=True,
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn(
+            "Contract semantics changed without incrementing contract_version: acceptance_criteria",
+            output,
+        )
 
     def test_repository_validation_without_base_ref_is_accepted(self) -> None:
         temporary, repo, _ = self.create_repo("DESIGNING", "READY", substantive=True)

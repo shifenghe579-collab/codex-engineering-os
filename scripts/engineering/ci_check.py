@@ -14,6 +14,25 @@ from os_core import (
 )
 
 
+CONTRACT_SEMANTIC_FIELDS = (
+    "id",
+    "kind",
+    "goal",
+    "current_behavior",
+    "expected_behavior",
+    "non_goals",
+    "invariants",
+    "acceptance_criteria",
+    "open_questions",
+    "scope",
+    "change_impact",
+    "risk",
+    "technical_direction",
+    "execution_plan",
+    "dispatch",
+)
+
+
 def task_files(repo_root: Path) -> list[Path]:
     return sorted(
         path
@@ -28,6 +47,18 @@ def is_lifecycle_bookkeeping(path: str) -> bool:
         or path.startswith("docs/engineering/evidence/")
         or (path.startswith("docs/engineering/tasks/T") and path.endswith(".yaml"))
     )
+
+
+def validate_contract_semantics(task: dict, old_task: dict | None) -> list[str]:
+    if old_task is None or task.get("contract_version") != old_task.get("contract_version"):
+        return []
+    changed = [field for field in CONTRACT_SEMANTIC_FIELDS if task.get(field) != old_task.get(field)]
+    if not changed:
+        return []
+    return [
+        "Contract semantics changed without incrementing contract_version: "
+        + ", ".join(changed)
+    ]
 
 
 def main() -> int:
@@ -57,6 +88,7 @@ def main() -> int:
                 task = load_yaml(task_path)
                 old_task = yaml_at_ref(repo_root, args.base_ref, changed_tasks[0])
                 errors.extend(validate_consistency(task, files, old_task))
+                errors.extend(validate_contract_semantics(task, old_task))
                 if any(not is_lifecycle_bookkeeping(path) for path in files) and task.get("status") != "MERGE_READY":
                     errors.append(
                         "Implementation-substantive pull requests require Task Contract status "
