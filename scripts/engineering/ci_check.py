@@ -22,6 +22,14 @@ def task_files(repo_root: Path) -> list[Path]:
     )
 
 
+def is_lifecycle_bookkeeping(path: str) -> bool:
+    return (
+        path == "docs/engineering/HANDOFF.md"
+        or path.startswith("docs/engineering/evidence/")
+        or (path.startswith("docs/engineering/tasks/T") and path.endswith(".yaml"))
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="GitHub CI entry point for Engineering OS checks.")
     parser.add_argument("--repo-root", type=Path)
@@ -42,14 +50,18 @@ def main() -> int:
         if args.base_ref:
             files = changed_files(repo_root, args.base_ref, args.head_ref)
             changed_tasks = [path for path in files if path.startswith("docs/engineering/tasks/T") and path.endswith(".yaml")]
-            substantive = [path for path in files if path != "docs/engineering/HANDOFF.md"]
-            if substantive and len(changed_tasks) != 1:
+            if files and len(changed_tasks) != 1:
                 errors.append("Each pull request must change exactly one formal Task Contract")
             elif changed_tasks:
                 task_path = repo_root / changed_tasks[0]
                 task = load_yaml(task_path)
                 old_task = yaml_at_ref(repo_root, args.base_ref, changed_tasks[0])
                 errors.extend(validate_consistency(task, files, old_task))
+                if any(not is_lifecycle_bookkeeping(path) for path in files) and task.get("status") != "MERGE_READY":
+                    errors.append(
+                        "Implementation-substantive pull requests require Task Contract status "
+                        f"MERGE_READY; found {task.get('status')}"
+                    )
     except EngineeringOSError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2

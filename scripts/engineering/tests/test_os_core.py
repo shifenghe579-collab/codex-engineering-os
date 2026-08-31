@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+import io
+import subprocess
 import sys
+import tempfile
 import tomllib
 import unittest
 from copy import deepcopy
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = SCRIPT_DIR.parents[1]
@@ -20,6 +25,7 @@ from os_core import (  # noqa: E402
     validate_task,
     validate_transition,
 )
+from ci_check import main as ci_main  # noqa: E402
 
 
 def approval() -> dict[str, str]:
@@ -134,6 +140,118 @@ class RepositoryArtifactTests(unittest.TestCase):
     def test_governance_digest_is_stable_shape(self) -> None:
         digest = governance_digest(REPO_ROOT)
         self.assertRegex(digest, r"^sha256:[0-9a-f]{64}$")
+
+
+class CiEntryPointTests(unittest.TestCase):
+    def git(self, repo: Path, *args: str) -> str:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=repo,
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=True,
+        )
+        return result.stdout.strip()
+
+    def task_for_status(self, status: str, subject_sha: str) -> dict:
+        task = valid_task()
+        task["status"] = status
+        task["scope"]["allowed"].append("docs/engineering/evidence/T001/**")
+        if status in {"MERGE_READY", "MERGED"}:
+            task["git"]["implementation_sha"] = subject_sha
+            task["git"]["integration_candidate_sha"] = subject_sha
+            task["approvals"]["review"] = approval()
+            task["approvals"]["acceptance"] = approval()
+            task["evidence_refs"] = [
+                {
+                    "type": evidence_type,
+                    "path": f"docs/engineering/evidence/T001/{evidence_type}.yaml",
+                    "subject_sha": subject_sha,
+                    "valid": True,
+                }
+                for evidence_type in ("implementation", "review", "acceptance", "integration")
+            ]
+        return task
+
+    def create_repo(self, base_status: str, head_status: str, substantive: bool) -> tuple[tempfile.TemporaryDirectory, Path, str]:
+        temporary = tempfile.TemporaryDirectory()
+        repo = Path(temporary.name)
+        (repo / "governance").mkdir()
+        (repo / "docs/engineering/tasks").mkdir(parents=True)
+        (repo / "docs/engineering/evidence/T001").mkdir(parents=True)
+        for name in ("RISK_RULES.yaml", "GATE_POLICY.yaml"):
+            (repo / "governance" / name).write_text(
+                (REPO_ROOT / "governance" / name).read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+        self.git(repo, "init", "-b", "main")
+        self.git(repo, "config", "user.name", "test")
+        self.git(repo, "config", "user.email", "test@example.invalid")
+        (repo / "docs/engineering/tasks/T001.yaml").write_text(
+            json.dumps(self.task_for_status(base_status, "a" * 40)),
+            encoding="utf-8",
+        )
+        self.git(repo, "add", ".")
+        self.git(repo, "commit", "-m", "base")
+        base_sha = self.git(repo, "rev-parse", "HEAD")
+
+        task = self.task_for_status(head_status, base_sha)
+        task["git"]["base_sha"] = base_sha
+        (repo / "docs/engineering/tasks/T001.yaml").write_text(json.dumps(task), encoding="utf-8")
+        for evidence_type in ("implementation", "review", "acceptance", "integration"):
+            (repo / f"docs/engineering/evidence/T001/{evidence_type}.yaml").write_text(
+                json.dumps({"task": "T001", "contract_version": 1, "subject_sha": base_sha}),
+                encoding="utf-8",
+            )
+        if substantive:
+            (repo / "src").mkdir()
+            (repo / "src/app.py").write_text("VALUE = 1\n", encoding="utf-8")
+        self.git(repo, "add", ".")
+        self.git(repo, "commit", "-m", "head")
+        return temporary, repo, base_sha
+
+    def run_ci(self, repo: Path, base_sha: str | None) -> tuple[int, str]:
+        arguments = ["ci_check.py", "--repo-root", str(repo)]
+        if base_sha:
+            arguments.extend(["--base-ref", base_sha, "--head-ref", "HEAD"])
+        output = io.StringIO()
+        with patch.object(sys, "argv", arguments), redirect_stdout(output), redirect_stderr(output):
+            result = ci_main()
+        return result, output.getvalue()
+
+    def test_substantive_ready_is_rejected(self) -> None:
+        temporary, repo, base_sha = self.create_repo("DESIGNING", "READY", substantive=True)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("require Task Contract status MERGE_READY; found READY", output)
+
+    def test_substantive_merge_ready_is_accepted(self) -> None:
+        temporary, repo, base_sha = self.create_repo("INTEGRATION_VERIFYING", "MERGE_READY", substantive=True)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_substantive_merged_is_rejected(self) -> None:
+        temporary, repo, base_sha = self.create_repo("MERGE_READY", "MERGED", substantive=True)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("require Task Contract status MERGE_READY; found MERGED", output)
+
+    def test_lifecycle_only_merge_transition_is_accepted(self) -> None:
+        temporary, repo, base_sha = self.create_repo("MERGE_READY", "MERGED", substantive=False)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_repository_validation_without_base_ref_is_accepted(self) -> None:
+        temporary, repo, _ = self.create_repo("DESIGNING", "READY", substantive=True)
+        with temporary:
+            result, output = self.run_ci(repo, None)
+        self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
 
 
 if __name__ == "__main__":

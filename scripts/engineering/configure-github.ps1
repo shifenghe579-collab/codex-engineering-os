@@ -35,6 +35,8 @@ if ($LASTEXITCODE -ne 0 -or -not $UserId) {
     throw "Unable to resolve GitHub user: $Owner"
 }
 
+$ApprovalEnvironments = @('product-approval', 'governance-approval', 'production')
+
 $EnvironmentBody = @{
     wait_timer = 0
     prevent_self_review = $false
@@ -47,7 +49,7 @@ $EnvironmentBody = @{
     deployment_branch_policy = $null
 }
 
-foreach ($Environment in @('product-approval', 'governance-approval', 'production')) {
+foreach ($Environment in $ApprovalEnvironments) {
     Invoke-GhJson -Method PUT -Endpoint "repos/$Owner/$Repository/environments/$Environment" -Body $EnvironmentBody
 }
 
@@ -104,6 +106,21 @@ if ($Existing) {
 }
 else {
     Invoke-GhJson -Method POST -Endpoint "repos/$Owner/$Repository/rulesets" -Body $RulesetBody
+}
+
+$BypassEnabled = @()
+foreach ($Environment in $ApprovalEnvironments) {
+    $EnvironmentState = & $Gh api "repos/$Owner/$Repository/environments/$Environment" | ConvertFrom-Json
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to verify GitHub Environment: $Environment"
+    }
+    if ($EnvironmentState.can_admins_bypass -ne $false) {
+        $BypassEnabled += $Environment
+    }
+}
+
+if ($BypassEnabled.Count -gt 0) {
+    throw "Administrator bypass must be disabled for GitHub Environments: $($BypassEnabled -join ', ')"
 }
 
 Write-Host "Configured environments and main branch ruleset for $Owner/$Repository."
