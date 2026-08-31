@@ -7,8 +7,9 @@
 - Repository: https://github.com/shifenghe579-collab/codex-engineering-os
 - Active task: T001 merge-gate hardening
 - Task state: MERGE_READY
-- Implementation SHA: `5e85046e59953516b7d0898223dc3b2e2fa5c655`
-- Integration candidate SHA: `a2cca6afbd19cfa253f01450d666661471449ed9`
+- Contract version: 2
+- Implementation SHA: `70ae192daa4f446e05eb9c87e548d0723194134a`
+- Integration candidate SHA: `a6dd0c177e7ed760245a190da438d626a8a99273`
 - Reviewer: APPROVED
 - Verifier: PASS
 - GitHub Environments: administrator bypass disabled for product-approval, governance-approval, and production

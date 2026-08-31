@@ -1,7 +1,7 @@
 task: T001
-contract_version: 1
-subject_sha: a2cca6afbd19cfa253f01450d666661471449ed9
-generated_at: 2026-08-31T09:23:13.027253+00:00
+contract_version: 2
+subject_sha: a6dd0c177e7ed760245a190da438d626a8a99273
+generated_at: 2026-08-31T09:53:48.665728+00:00
 checks:
   - gate_id: gate_engine_tests
     provenance: ci
@@ -14,8 +14,8 @@ checks:
       - -s
       - scripts/engineering/tests
       - -v
-    timestamp: 2026-08-31T09:23:13.027253+00:00
+    timestamp: 2026-08-31T09:53:48.665728+00:00
     exit_code: 0
-    artifact_digest: sha256:c84096e9e8689f7abb57efaaf9be3d737e7a7786fdf0a042c45e60ed24152b4e
-    source_uri: codex://local/T001/integration-verify
+    artifact_digest: sha256:1e3b51482cc43fff3226a5b9811275924cbb65a49c8061ee423bf0dd94572ef1
+    source_uri: codex://local/T001/v2-integration-verify
     unverified: []

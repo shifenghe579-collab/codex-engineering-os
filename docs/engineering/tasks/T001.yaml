@@ -1,7 +1,7 @@
 id: T001
 kind: governance
 contract_version: 2
-status: INTEGRATION_VERIFYING
+status: MERGE_READY
 
 goal: Close the two known merge-governance gaps before the repository is used for product development.
 current_behavior: Pull-request checks did not explicitly require MERGE_READY, GitHub Environments permitted administrator bypass while configuration reported success, and the Approval Gates classifier fails before human approval because its workflow does not install PyYAML.
@@ -87,7 +87,7 @@ dispatch:
 git:
   base_sha: f5f93e9b03c73442bfa5b647748183424aa7ad20
   implementation_sha: 70ae192daa4f446e05eb9c87e548d0723194134a
-  integration_candidate_sha: null
+  integration_candidate_sha: a6dd0c177e7ed760245a190da438d626a8a99273
 
 approvals:
   requirement:
@@ -128,4 +128,8 @@ evidence_refs:
   - type: acceptance
     path: docs/engineering/evidence/T001/acceptance.yaml
     subject_sha: 70ae192daa4f446e05eb9c87e548d0723194134a
+    valid: true
+  - type: integration
+    path: docs/engineering/evidence/T001/integration.yaml
+    subject_sha: a6dd0c177e7ed760245a190da438d626a8a99273
     valid: true
