@@ -1,7 +1,7 @@
 id: T004
 kind: governance
 contract_version: 2
-status: MERGE_READY
+status: MERGED
 
 goal: Allow authorized lifecycle-only pull requests to pass consistency validation without replaying historical change-impact document edits.
 current_behavior: A lifecycle-only pull request for a Task whose frozen change_impact declares architecture, spec, project, or ADR changes fails because validate_consistency requires those historical documents to change again, even though lifecycle inheritance permits only the same Task status and HANDOFF.
