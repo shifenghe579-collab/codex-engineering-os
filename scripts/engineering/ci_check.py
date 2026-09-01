@@ -37,6 +37,7 @@ CONTRACT_SEMANTIC_FIELDS = (
 
 MERGE_READY_INDEX = MAIN_STATES.index("MERGE_READY")
 MERGED_INDEX = MAIN_STATES.index("MERGED")
+READY_INDEX = MAIN_STATES.index("READY")
 
 
 def task_files(repo_root: Path) -> list[Path]:
@@ -201,6 +202,7 @@ def validate_authorization_snapshot(
     subject_status = subject_task.get("status")
     if (
         subject_status not in MAIN_STATES
+        or MAIN_STATES.index(subject_status) < READY_INDEX
         or MAIN_STATES.index(subject_status) > MERGE_READY_INDEX
         or final_task.get("status") != "MERGE_READY"
     ):

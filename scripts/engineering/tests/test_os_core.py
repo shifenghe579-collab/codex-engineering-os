@@ -264,6 +264,7 @@ class CiEntryPointTests(unittest.TestCase):
         *,
         task_mutator=None,
         manifest_mutator=None,
+        descendant_files: dict[str, str] | None = None,
     ) -> tuple[tempfile.TemporaryDirectory, Path, str, str]:
         temporary, repo, _, _, _ = self.create_merge_ready_repo()
         task = json.loads((repo / "docs/engineering/tasks/T001.yaml").read_text(encoding="utf-8"))
@@ -285,8 +286,35 @@ class CiEntryPointTests(unittest.TestCase):
         handoff.write_text("T001 merged\n", encoding="utf-8")
         if manifest_mutator:
             manifest_mutator(repo)
+        if descendant_files:
+            for relative, content in descendant_files.items():
+                path = repo / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8")
         head_sha = self.commit(repo, "lifecycle")
         return temporary, repo, merge_ready_sha, head_sha
+
+    def create_ready_update_repo(
+        self,
+        *,
+        base_status: str,
+        substantive: bool,
+        rewrite_acceptance: bool,
+    ) -> tuple[tempfile.TemporaryDirectory, Path, str, str]:
+        temporary, repo, original_base, _, _ = self.create_merge_ready_repo()
+        task = self.recording_task(original_base)
+        task["status"] = base_status
+        self.write_task(repo, task)
+        base_sha = self.commit(repo, "ready-state base")
+
+        task["status"] = "READY"
+        if rewrite_acceptance:
+            task["acceptance_criteria"] = ["Rewritten acceptance semantics."]
+        self.write_task(repo, task)
+        if substantive:
+            (repo / "src/late.py").write_text("VALUE = 2\n", encoding="utf-8")
+        head_sha = self.commit(repo, "ready-state head")
+        return temporary, repo, base_sha, head_sha
 
     def run_ci(
         self,
@@ -307,6 +335,79 @@ class CiEntryPointTests(unittest.TestCase):
         with temporary:
             result, output = self.run_ci(repo, base_sha)
         self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_substantive_ready_is_rejected(self) -> None:
+        temporary, repo, base_sha, head_sha = self.create_ready_update_repo(
+            base_status="DESIGNING",
+            substantive=True,
+            rewrite_acceptance=False,
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("require Task Contract status MERGE_READY; found READY", output)
+
+    def test_substantive_merge_ready_is_accepted(self) -> None:
+        temporary, repo, base_sha, _, head_sha = self.create_merge_ready_repo()
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_substantive_merged_is_rejected(self) -> None:
+        temporary, repo, base_sha, head_sha = self.create_lifecycle_repo(
+            descendant_files={"src/late.py": "VALUE = 2\n"}
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("require Task Contract status MERGE_READY; found MERGED", output)
+
+    def test_lifecycle_only_merge_transition_is_accepted(self) -> None:
+        temporary, repo, base_sha, head_sha = self.create_lifecycle_repo()
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_ready_contract_semantics_cannot_change_without_new_version(self) -> None:
+        temporary, repo, base_sha, head_sha = self.create_ready_update_repo(
+            base_status="READY",
+            substantive=False,
+            rewrite_acceptance=True,
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual(result, 1)
+        self.assertIn(
+            "Contract semantics changed without incrementing contract_version: acceptance_criteria",
+            output,
+        )
+
+    def test_merge_ready_contract_semantics_cannot_change_without_new_version(self) -> None:
+        temporary, repo, _, _, merge_ready_sha = self.create_merge_ready_repo()
+        with temporary:
+            task = json.loads((repo / "docs/engineering/tasks/T001.yaml").read_text(encoding="utf-8"))
+            task["acceptance_criteria"] = ["Rewritten acceptance semantics."]
+            self.write_task(repo, task)
+            rewritten_sha = self.commit(repo, "rewrite merge-ready semantics")
+            result, output = self.run_ci(repo, merge_ready_sha, rewritten_sha)
+        self.assertEqual(result, 1)
+        self.assertIn(
+            "Contract semantics changed without incrementing contract_version: acceptance_criteria",
+            output,
+        )
+
+    def test_pre_ready_authorization_subject_is_rejected(self) -> None:
+        def mutate(task: dict) -> None:
+            task["status"] = "DESIGNING"
+
+        temporary, repo, base_sha, _, _ = self.create_merge_ready_repo(
+            subject_mutator=mutate
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("not monotonic", output)
+        self.assertIn("DESIGNING -> MERGE_READY", output)
 
     def test_source_test_workflow_and_governance_descendants_are_rejected(self) -> None:
         cases = {
