@@ -1,0 +1,115 @@
+id: T002
+kind: governance
+contract_version: 1
+status: READY
+
+goal: Prevent stale or unrelated Evidence from authorizing a pull-request HEAD that contains later substantive changes.
+current_behavior: CI validates that Evidence subject SHAs match Task Contract SHA fields, but it does not prove that those SHAs are ancestors of the pull-request HEAD or that later changes are limited to lifecycle bookkeeping.
+expected_behavior: For a MERGE_READY pull request, validation requires the current PR base to be an ancestor of every authorization SHA, every authorization SHA to be an ancestor of the explicit PR head, and all later net changes to be constrained same-task recording bookkeeping with a frozen authorization snapshot. After squash merge, lifecycle-only pull requests inherit the authorization already accepted on their base and must freeze candidate identity, existing Evidence, and approvals while allowing only legal state and HANDOFF updates. Missing history, stale base lineage, substantive descendant changes, unrelated-task bookkeeping, and post-evidence authorization changes fail closed.
+non_goals:
+  - Implement the proposed Codex-conversation approval model or remove GitHub approval environments.
+  - Repair CHANGES_REQUESTED reachability or decide permanent Task id and kind immutability.
+  - Change Evidence schemas or require a commit to contain its own SHA.
+  - Redesign the task state machine or risk model.
+invariants:
+  - Evidence files continue to bind to the current contract version and the SHA declared in their Task reference.
+  - Integration candidate and Evidence SHAs may precede pull-request HEAD because their recording commits cannot contain their own future SHA.
+  - A MERGE_READY authorization SHA is fresh only when the explicit PR base is its ancestor and it is an ancestor of the explicit PR head.
+  - Only recording changes to docs/engineering/tasks/T002.yaml, docs/engineering/evidence/T002/**, and docs/engineering/HANDOFF.md may follow an authorization SHA; Task recording fields remain field-constrained.
+  - Contract version, contract semantics, git.base_sha, governance baseline, and requirement, architecture, and risk approvals are frozen at every authorization SHA.
+  - Status may only advance legally; implementation and candidate SHAs may only be recorded from null to their final value; review and acceptance approvals may only be added; Evidence references may only be appended without rewriting existing entries.
+  - Pull-request validation reads the changed Task and its Evidence from the explicit head ref supplied by CI rather than assuming the checkout or working-tree HEAD.
+  - MERGED and later lifecycle pull requests do not require pre-squash SHAs to be ancestors of post-squash main, but must freeze the authorization inherited from their base.
+  - Repository-wide validation without a base ref remains usable.
+acceptance_criteria:
+  - A MERGE_READY pull request passes when the explicit PR base is an ancestor of integration_candidate_sha and every valid Evidence subject SHA, each authorization SHA is an ancestor of the explicit PR head, and all later net changes are permitted T002 recording bookkeeping.
+  - CI fails with a clear error when integration_candidate_sha or any valid Evidence subject SHA is missing, does not contain the explicit PR base, or is not an ancestor of the explicit PR head.
+  - CI fails when a source, test, workflow, governance, or unrelated-task file differs between a relevant Evidence or candidate SHA and the validated HEAD.
+  - CI fails when T002 is absent at an authorization SHA or when its contract version, contract semantics, git.base_sha, governance baseline, or requirement, architecture, or risk approval differs from the explicit-head Task Contract.
+  - CI fails when status, implementation or candidate SHA recording, review or acceptance approval, or Evidence references change non-monotonically after an authorization SHA.
+  - A squash-merged lifecycle transition passes without requiring pre-squash authorization SHAs to be ancestors of post-squash main, while any rewrite of candidate identity, inherited approvals, or an existing valid Evidence reference or manifest fails.
+  - Validation uses the explicit head tree when the checkout HEAD differs, and missing or shallow history fails clearly rather than falling back to the checkout.
+  - Automated tests cover recording-descendant acceptance; source, test, workflow, and governance descendant rejection; unrelated-task rejection; missing and non-ancestor SHAs; stale base lineage; new-task subject presence and version checks; authorization snapshot and monotonic-field enforcement; squash lifecycle inheritance and freeze; explicit-head mismatch; missing history; and non-PR repository validation.
+  - The complete engineering verification suite and GitHub required checks pass on the integration candidate.
+open_questions: []
+
+scope:
+  allowed:
+    - docs/engineering/tasks/T002.yaml
+    - docs/engineering/evidence/T002/**
+    - scripts/engineering/ci_check.py
+    - scripts/engineering/tests/test_os_core.py
+    - docs/engineering/ARCHITECTURE.md
+    - docs/engineering/HANDOFF.md
+  forbidden:
+    - AGENTS.md
+    - governance/**
+    - .github/**
+    - .codex/**
+
+change_impact:
+  spec: false
+  architecture: true
+  project: false
+  adr: false
+  tests: true
+  runtime: false
+
+risk:
+  classified: R2
+  floor: R2
+  triggers:
+    - major_infrastructure
+
+technical_direction: Add pull-request freshness validation at the ci_check.py entry-point boundary. For final status MERGE_READY, resolve the changed Task and Evidence from the explicit head ref; require git.base_sha to identify the explicit PR base; require that base to be an ancestor of implementation_sha, integration_candidate_sha, and every valid Evidence subject, and each subject to be an ancestor of the explicit head. Directly compare subject to head and permit only same-task recording paths. At every subject, require the same Task and frozen authorization snapshot, then enforce monotonic recording fields. For MERGED and later lifecycle-only transitions, skip pre-squash ancestry and instead compare base and head to freeze candidate, inherited approvals, existing Evidence refs/manifests, and all non-lifecycle fields. Keep non-PR validation behavior unchanged and fail clearly when required Git objects are unavailable.
+execution_plan:
+  - Obtain an independent architecture challenge on ancestor, bookkeeping, and contract-semantic rules.
+  - Dispatch the approved contract to an isolated Worker implementation.
+  - Add focused temporary-repository tests at the CI entry-point boundary.
+  - Bind implementation Evidence to the implementation SHA.
+  - Obtain independent Reviewer and Verifier evidence on the same SHA.
+  - Build one integration candidate, rerun required verification, and merge only after all required gates pass.
+
+dispatch:
+  profile: worker-governance
+  mode: worktree
+  required_environment:
+    - local-test
+    - github-actions
+  required_gates:
+    - contract_approval
+    - architecture_challenge
+    - acceptance_plan
+    - implementation_verify
+    - independent_review
+    - independent_acceptance
+    - integration_verify
+    - ci
+
+git:
+  base_sha: 0988d08978ed70179c80a11a4057e316edeb76c4
+  implementation_sha: null
+  integration_candidate_sha: null
+
+approvals:
+  requirement:
+    by: product-authority
+    at: 2026-08-31T19:55:13+08:00
+    source_uri: codex://thread/current#continue-t002
+  architecture:
+    by: t002-architecture-challenger
+    at: 2026-09-01T09:15:56+08:00
+    source_uri: codex-agent://t002_arch_challenge#approved-v1
+  review: null
+  acceptance: null
+  risk: null
+
+proposed_state_changes:
+  - Keep the Codex-conversation approval redesign as a separate future Governance Task.
+  - Keep CHANGES_REQUESTED reachability and permanent Task identity rules in T003.
+
+governance_baseline:
+  commit: 0988d08978ed70179c80a11a4057e316edeb76c4
+  digest: sha256:b55ce41837f501614087001413f7454350c792770a32461d233d2577f2bcbb8b
+
+evidence_refs: []
