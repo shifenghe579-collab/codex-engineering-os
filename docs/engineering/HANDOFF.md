@@ -5,8 +5,9 @@
 - Architecture baseline: approved
 - Implementation target: GitHub-first V1
 - Repository: https://github.com/shifenghe579-collab/codex-engineering-os
-- Active task: T002 evidence freshness and PR-head binding
-- Task state: POST_MERGE_VERIFYING
+- Active task: none
+- Completed task: T002 evidence freshness and PR-head binding
+- T002 state: DEVELOPMENT_COMPLETE
 - Contract version: 1
 - Base SHA: `0988d08978ed70179c80a11a4057e316edeb76c4`
 - Implementation SHA: `84d122585cb46a320c0159429e70aab4af4fef80`
@@ -15,9 +16,8 @@
 - Verifier: PASS
 - T002 substantive merge SHA: `00f8a106ce24ebe366798438716fd8e551659496`
 - T002 substantive post-merge Actions: `33462130233` (SUCCESS)
-- T002 latest lifecycle merge SHA: `0e8af16e4d1c2c3533a103c861557bbffec583ce`
-- T002 latest post-merge Actions: `33474734725` (SUCCESS)
-- T002 lifecycle state: POST_MERGE_VERIFYING
+- T002 latest lifecycle merge SHA: `e3fb33e149867245ae253916da63d3335d78a038`
+- T002 latest post-merge Actions: `33474942278` (SUCCESS)
 - Completed task: T004 lifecycle impact consistency correction
 - T004 state: DEVELOPMENT_COMPLETE
 - T004 implementation squash merge SHA: `c38cb1cc98820742f9e54b8645c48e6b1240f4b5`
@@ -35,8 +35,8 @@
 ## Blocking follow-up governance work
 
 - T003: make `CHANGES_REQUESTED` reachable from review-related states and decide whether Task `id` and `kind` are permanently immutable.
-- Future: implement the approved design for Codex-conversation user decisions without repetitive GitHub lifecycle approvals.
+- T005: implement the approved design for Codex-conversation user decisions without repetitive GitHub lifecycle approvals.
 
 ## Next checkpoint
 
-Merge this lifecycle-only state update, verify the new main SHA and CI, then advance T002 to DEVELOPMENT_COMPLETE in the next legal transition.
+Merge this lifecycle-only state update and verify the new main SHA and CI. Then create T005 as a separate Governance Task for Codex-conversation user decisions; T003 remains an independent follow-up.
