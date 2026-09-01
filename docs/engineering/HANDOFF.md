@@ -6,11 +6,13 @@
 - Implementation target: GitHub-first V1
 - Repository: https://github.com/shifenghe579-collab/codex-engineering-os
 - Active task: T002 evidence freshness and PR-head binding
-- Task state: MERGE_READY
+- Task state: MERGED
 - Contract version: 1
 - Base SHA: `0988d08978ed70179c80a11a4057e316edeb76c4`
 - Implementation SHA: `84d122585cb46a320c0159429e70aab4af4fef80`
 - Integration candidate SHA: `a39be20a72ffcc68ce723c789a65812694afd89c`
+- Squash merge SHA: `00f8a106ce24ebe366798438716fd8e551659496`
+- Post-merge Actions: `33462130233` (SUCCESS)
 - Reviewer: APPROVED
 - Verifier: PASS
 - Completed task: T001 merge-gate hardening
@@ -29,4 +31,4 @@
 
 ## Next checkpoint
 
-Commit this candidate-bound integration evidence, validate the resulting PR head against explicit main/head refs, then request merge approvals and CI.
+Merge this lifecycle-only state update, then advance T002 to POST_MERGE_VERIFYING in the next legal transition.
