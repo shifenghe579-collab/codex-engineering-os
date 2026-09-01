@@ -1,7 +1,7 @@
 id: T002
 kind: governance
 contract_version: 1
-status: INTEGRATION_VERIFYING
+status: MERGE_READY
 
 goal: Prevent stale or unrelated Evidence from authorizing a pull-request HEAD that contains later substantive changes.
 current_behavior: CI validates that Evidence subject SHAs match Task Contract SHA fields, but it does not prove that those SHAs are ancestors of the pull-request HEAD or that later changes are limited to lifecycle bookkeeping.
@@ -89,7 +89,7 @@ dispatch:
 git:
   base_sha: 0988d08978ed70179c80a11a4057e316edeb76c4
   implementation_sha: 84d122585cb46a320c0159429e70aab4af4fef80
-  integration_candidate_sha: null
+  integration_candidate_sha: a39be20a72ffcc68ce723c789a65812694afd89c
 
 approvals:
   requirement:
@@ -130,4 +130,8 @@ evidence_refs:
   - type: acceptance
     path: docs/engineering/evidence/T002/acceptance.yaml
     subject_sha: 84d122585cb46a320c0159429e70aab4af4fef80
+    valid: true
+  - type: integration
+    path: docs/engineering/evidence/T002/integration.yaml
+    subject_sha: a39be20a72ffcc68ce723c789a65812694afd89c
     valid: true
