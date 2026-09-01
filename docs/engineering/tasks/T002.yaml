@@ -1,7 +1,7 @@
 id: T002
 kind: governance
 contract_version: 1
-status: MERGED
+status: POST_MERGE_VERIFYING
 
 goal: Prevent stale or unrelated Evidence from authorizing a pull-request HEAD that contains later substantive changes.
 current_behavior: CI validates that Evidence subject SHAs match Task Contract SHA fields, but it does not prove that those SHAs are ancestors of the pull-request HEAD or that later changes are limited to lifecycle bookkeeping.
