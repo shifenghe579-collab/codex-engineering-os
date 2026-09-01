@@ -1,6 +1,6 @@
 id: T004
 kind: governance
-contract_version: 1
+contract_version: 2
 status: DESIGNING
 
 goal: Allow authorized lifecycle-only pull requests to pass consistency validation without replaying historical change-impact document edits.
@@ -11,15 +11,16 @@ non_goals:
   - Weaken change-impact consistency for substantive pull requests.
   - Implement the deferred Codex-conversation approval redesign.
 invariants:
-  - Lifecycle classification must be derived from the explicit base and head Task Contracts before consistency validation is applied.
+  - The change-impact exception must reuse the existing authorized lifecycle branch predicate derived from the explicit base and head Task Contracts; a Task/HANDOFF-only path set is not sufficient authorization.
   - Lifecycle-only pull requests may still change only the same Task status and HANDOFF.
   - Scope, forbidden-path, protected-governance, legal-transition, and lifecycle-inheritance checks remain active.
-  - Substantive pull requests still require every declared spec, architecture, project, and ADR impact to match their changed paths.
+  - Substantive pull requests retain the existing bidirectional spec, architecture, and project impact checks and the existing declared-ADR presence check.
 acceptance_criteria:
   - A MERGE_READY to MERGED lifecycle-only pull request passes when the frozen Task has change_impact.architecture true and only the Task status and HANDOFF change.
   - Equivalent authorized lifecycle transitions do not require historical spec, project, or ADR files to change again.
+  - An ordinary pre-authorization Task-only transition with change_impact.architecture true still fails when ARCHITECTURE.md is absent, even if its changed paths resemble lifecycle bookkeeping.
   - Lifecycle pull requests still fail for an illegal state transition, an unexpected path, a frozen authorization rewrite, or a changed path outside Task scope.
-  - A substantive pull request still fails when a declared change-impact document is missing or when an undeclared impact document changes.
+  - A substantive pull request still fails when a declared change-impact document is missing, and still rejects undeclared SPEC, ARCHITECTURE, or PROJECT changes under the existing rules.
   - Automated regression tests exercise both the lifecycle exception and the retained substantive enforcement through the CI entry point.
   - The complete engineering verification suite and GitHub required checks pass on the integration candidate.
 open_questions: []
@@ -53,7 +54,7 @@ risk:
   triggers:
     - major_infrastructure
 
-technical_direction: Classify an authorized lifecycle pull request from the explicit base and head Task states before running consistency validation. Keep scope, protected-path, and transition validation active, but suppress only the historical change-impact path-presence requirement for that lifecycle case. Preserve the existing substantive path checks and lifecycle authorization freeze.
+technical_direction: Reuse the existing authorized lifecycle branch predicate derived from the explicit base and head Task states before running consistency validation; do not infer authorization only from changed paths. Keep scope, protected-path, reverse impact, and transition validation active, but suppress only the declared historical change-impact path-presence requirement for that lifecycle case. Preserve the existing substantive checks and lifecycle authorization freeze.
 execution_plan:
   - Obtain an independent architecture challenge on the lifecycle classification boundary and retained checks.
   - Dispatch the approved contract to an isolated Worker implementation.
