@@ -1,0 +1,103 @@
+id: T004
+kind: governance
+contract_version: 1
+status: DESIGNING
+
+goal: Allow authorized lifecycle-only pull requests to pass consistency validation without replaying historical change-impact document edits.
+current_behavior: A lifecycle-only pull request for a Task whose frozen change_impact declares architecture, spec, project, or ADR changes fails because validate_consistency requires those historical documents to change again, even though lifecycle inheritance permits only the same Task status and HANDOFF.
+expected_behavior: Lifecycle-only pull requests continue to enforce scope, protected-path, legal-transition, authorization-freeze, and path restrictions, but do not require historical change-impact documents to be modified again. Substantive pull requests retain the existing change-impact consistency requirements.
+non_goals:
+  - Change lifecycle state transitions, authorization snapshots, Evidence freshness, or permitted lifecycle paths.
+  - Weaken change-impact consistency for substantive pull requests.
+  - Implement the deferred Codex-conversation approval redesign.
+invariants:
+  - Lifecycle classification must be derived from the explicit base and head Task Contracts before consistency validation is applied.
+  - Lifecycle-only pull requests may still change only the same Task status and HANDOFF.
+  - Scope, forbidden-path, protected-governance, legal-transition, and lifecycle-inheritance checks remain active.
+  - Substantive pull requests still require every declared spec, architecture, project, and ADR impact to match their changed paths.
+acceptance_criteria:
+  - A MERGE_READY to MERGED lifecycle-only pull request passes when the frozen Task has change_impact.architecture true and only the Task status and HANDOFF change.
+  - Equivalent authorized lifecycle transitions do not require historical spec, project, or ADR files to change again.
+  - Lifecycle pull requests still fail for an illegal state transition, an unexpected path, a frozen authorization rewrite, or a changed path outside Task scope.
+  - A substantive pull request still fails when a declared change-impact document is missing or when an undeclared impact document changes.
+  - Automated regression tests exercise both the lifecycle exception and the retained substantive enforcement through the CI entry point.
+  - The complete engineering verification suite and GitHub required checks pass on the integration candidate.
+open_questions: []
+
+scope:
+  allowed:
+    - docs/engineering/tasks/T004.yaml
+    - docs/engineering/evidence/T004/**
+    - scripts/engineering/ci_check.py
+    - scripts/engineering/os_core.py
+    - scripts/engineering/tests/test_os_core.py
+    - docs/engineering/ARCHITECTURE.md
+    - docs/engineering/HANDOFF.md
+  forbidden:
+    - AGENTS.md
+    - governance/**
+    - .github/**
+    - .codex/**
+
+change_impact:
+  spec: false
+  architecture: true
+  project: false
+  adr: false
+  tests: true
+  runtime: false
+
+risk:
+  classified: R2
+  floor: R2
+  triggers:
+    - major_infrastructure
+
+technical_direction: Classify an authorized lifecycle pull request from the explicit base and head Task states before running consistency validation. Keep scope, protected-path, and transition validation active, but suppress only the historical change-impact path-presence requirement for that lifecycle case. Preserve the existing substantive path checks and lifecycle authorization freeze.
+execution_plan:
+  - Obtain an independent architecture challenge on the lifecycle classification boundary and retained checks.
+  - Dispatch the approved contract to an isolated Worker implementation.
+  - Add focused CI-entry-point regression tests for lifecycle and substantive behavior.
+  - Bind implementation Evidence to the implementation SHA.
+  - Obtain independent Reviewer and Verifier evidence on the same SHA.
+  - Build one integration candidate, rerun required verification, and merge only after all required gates pass.
+
+dispatch:
+  profile: worker-governance
+  mode: worktree
+  required_environment:
+    - local-test
+    - github-actions
+  required_gates:
+    - contract_approval
+    - architecture_challenge
+    - acceptance_plan
+    - implementation_verify
+    - independent_review
+    - independent_acceptance
+    - integration_verify
+    - ci
+
+git:
+  base_sha: 00f8a106ce24ebe366798438716fd8e551659496
+  implementation_sha: null
+  integration_candidate_sha: null
+
+approvals:
+  requirement:
+    by: product-authority
+    at: 2026-09-01T10:24:59+08:00
+    source_uri: codex://thread/current#t002-merge-approved-and-continue
+  architecture: null
+  review: null
+  acceptance: null
+  risk: null
+
+proposed_state_changes:
+  - Resume T002 lifecycle transitions after this corrective gate change is merged and main CI passes.
+
+governance_baseline:
+  commit: 00f8a106ce24ebe366798438716fd8e551659496
+  digest: sha256:420bdddb32398fbc65985f183dd42da69bf2a77fedd8ac8fdf4f2a8f53e5ea16
+
+evidence_refs: []
