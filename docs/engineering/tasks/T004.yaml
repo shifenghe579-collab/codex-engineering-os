@@ -1,7 +1,7 @@
 id: T004
 kind: governance
 contract_version: 2
-status: READY
+status: INTEGRATION_VERIFYING
 
 goal: Allow authorized lifecycle-only pull requests to pass consistency validation without replaying historical change-impact document edits.
 current_behavior: A lifecycle-only pull request for a Task whose frozen change_impact declares architecture, spec, project, or ADR changes fails because validate_consistency requires those historical documents to change again, even though lifecycle inheritance permits only the same Task status and HANDOFF.
@@ -81,7 +81,7 @@ dispatch:
 
 git:
   base_sha: 00f8a106ce24ebe366798438716fd8e551659496
-  implementation_sha: null
+  implementation_sha: f9221339125839f11753e6ca0f49289c95c4565d
   integration_candidate_sha: null
 
 approvals:
@@ -93,8 +93,14 @@ approvals:
     by: t004-architecture-challenger
     at: 2026-09-01T10:33:19+08:00
     source_uri: codex://thread/current#t004-architecture-challenge-v2-approved-84ff3a5
-  review: null
-  acceptance: null
+  review:
+    by: t004-reviewer
+    at: 2026-09-01T11:29:31+08:00
+    source_uri: codex://thread/current#t004-review-f922133-approved
+  acceptance:
+    by: t004-verifier
+    at: 2026-09-01T11:29:31+08:00
+    source_uri: codex://thread/current#t004-verifier-f922133
   risk: null
 
 proposed_state_changes:
@@ -104,4 +110,16 @@ governance_baseline:
   commit: 00f8a106ce24ebe366798438716fd8e551659496
   digest: sha256:420bdddb32398fbc65985f183dd42da69bf2a77fedd8ac8fdf4f2a8f53e5ea16
 
-evidence_refs: []
+evidence_refs:
+  - type: implementation
+    path: docs/engineering/evidence/T004/implementation.yaml
+    subject_sha: f9221339125839f11753e6ca0f49289c95c4565d
+    valid: true
+  - type: review
+    path: docs/engineering/evidence/T004/review.yaml
+    subject_sha: f9221339125839f11753e6ca0f49289c95c4565d
+    valid: true
+  - type: acceptance
+    path: docs/engineering/evidence/T004/acceptance.yaml
+    subject_sha: f9221339125839f11753e6ca0f49289c95c4565d
+    valid: true

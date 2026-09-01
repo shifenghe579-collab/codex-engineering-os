@@ -1,0 +1,33 @@
+task: T004
+contract_version: 2
+subject_sha: f9221339125839f11753e6ca0f49289c95c4565d
+verifier: t004-verifier
+plan_ref: docs/engineering/tasks/T004.yaml#acceptance_criteria
+verdict: PASS
+scenarios:
+  - name: Authorized lifecycle historical impacts
+    expected: Authorized lifecycle-only transitions do not replay frozen spec, architecture, project, or ADR document changes.
+    actual: Architecture-only and all-four-impact temporary repositories passed with only Task and HANDOFF lifecycle changes.
+    result: PASS
+    evidence_ref: codex://thread/current#t004-verifier-f922133
+  - name: Pre-authorization lookalike
+    expected: A Task-only pre-authorization transition cannot obtain the lifecycle exception.
+    actual: The transition failed because the declared architecture document was absent.
+    result: PASS
+    evidence_ref: codex://thread/current#t004-verifier-f922133
+  - name: Substantive impact enforcement
+    expected: Declared missing impacts and undeclared SPEC, ARCHITECTURE, or PROJECT changes remain rejected.
+    actual: All declared-missing spec, architecture, project, and ADR cases and all three reverse-impact cases failed closed.
+    result: PASS
+    evidence_ref: codex://thread/current#t004-verifier-f922133
+  - name: Retained lifecycle controls
+    expected: Illegal transitions, unexpected or forbidden paths, out-of-scope changes, and authorization tampering remain rejected.
+    actual: Every constructed illegal transition, path violation, candidate rewrite, and review-approval rewrite was rejected.
+    result: PASS
+    evidence_ref: codex://thread/current#t004-verifier-f922133
+  - name: Complete regression suite
+    expected: Existing and new engineering tests and repository validation pass on the exact implementation SHA.
+    actual: 50 tests passed with no failures; repository validation passed for three formal Task Contracts.
+    result: PASS
+    evidence_ref: codex://thread/current#t004-verifier-f922133
+verified_at: 2026-09-01T11:29:31+08:00

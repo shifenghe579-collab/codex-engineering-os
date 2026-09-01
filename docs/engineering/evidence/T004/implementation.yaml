@@ -1,0 +1,21 @@
+task: T004
+contract_version: 2
+subject_sha: f9221339125839f11753e6ca0f49289c95c4565d
+generated_at: 2026-09-01T03:30:21.071982+00:00
+checks:
+  - gate_id: gate_engine_tests
+    provenance: ci
+    runner: Windows 11 / Python 3.12.13
+    command:
+      - C:\Users\DELL\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
+      - -m
+      - unittest
+      - discover
+      - -s
+      - scripts/engineering/tests
+      - -v
+    timestamp: 2026-09-01T03:30:21.071982+00:00
+    exit_code: 0
+    artifact_digest: sha256:3110718ee6ed13aa3ebcc9b7fb1823437916d12ff65b8563ebb382ad0abfea0f
+    source_uri: codex://thread/current#t004-implementation-f922133
+    unverified: []

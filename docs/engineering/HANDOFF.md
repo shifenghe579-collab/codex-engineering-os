@@ -5,14 +5,17 @@
 - Architecture baseline: approved
 - Implementation target: GitHub-first V1
 - Repository: https://github.com/shifenghe579-collab/codex-engineering-os
-- Active task: T002 evidence freshness and PR-head binding
-- Task state: MERGE_READY
-- Contract version: 1
-- Base SHA: `0988d08978ed70179c80a11a4057e316edeb76c4`
-- Implementation SHA: `84d122585cb46a320c0159429e70aab4af4fef80`
-- Integration candidate SHA: `a39be20a72ffcc68ce723c789a65812694afd89c`
+- Active task: T004 lifecycle impact consistency correction
+- Task state: INTEGRATION_VERIFYING
+- Contract version: 2
+- Base SHA: `00f8a106ce24ebe366798438716fd8e551659496`
+- Implementation SHA: `f9221339125839f11753e6ca0f49289c95c4565d`
+- Integration candidate SHA: pending
 - Reviewer: APPROVED
 - Verifier: PASS
+- T002 substantive merge SHA: `00f8a106ce24ebe366798438716fd8e551659496`
+- T002 post-merge Actions: `33462130233` (SUCCESS)
+- T002 lifecycle state: pending T004 correction
 - Completed task: T001 merge-gate hardening
 - T001 state: DEVELOPMENT_COMPLETE
 - T001 final main SHA: `0988d08978ed70179c80a11a4057e316edeb76c4`
@@ -29,4 +32,4 @@
 
 ## Next checkpoint
 
-Commit this candidate-bound integration evidence, validate the resulting PR head against explicit main/head refs, then request merge approvals and CI.
+Commit the T004 integration candidate, bind integration evidence to its exact SHA, then create the merge-ready recording commit and run explicit main/head validation.
