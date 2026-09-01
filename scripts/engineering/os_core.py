@@ -366,6 +366,7 @@ def validate_consistency(
     task: dict[str, Any],
     files: list[str],
     old_task: dict[str, Any] | None = None,
+    require_declared_impact_paths: bool = True,
 ) -> list[str]:
     errors: list[str] = []
     scope = task.get("scope", {})
@@ -391,12 +392,12 @@ def validate_consistency(
     for field, expected_path in impact_paths.items():
         declared = impact.get(field) is True if isinstance(impact, dict) else False
         actually_changed = expected_path in files
-        if declared and not actually_changed:
+        if require_declared_impact_paths and declared and not actually_changed:
             errors.append(f"change_impact.{field} is true but {expected_path} was not changed")
         if actually_changed and not declared:
             errors.append(f"{expected_path} changed but change_impact.{field} is false")
 
-    if isinstance(impact, dict) and impact.get("adr") is True:
+    if require_declared_impact_paths and isinstance(impact, dict) and impact.get("adr") is True:
         if not any(path.startswith("docs/engineering/decisions/ADR-") for path in files):
             errors.append("change_impact.adr is true but no ADR changed")
     if old_task is not None:

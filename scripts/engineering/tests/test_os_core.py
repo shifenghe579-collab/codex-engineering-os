@@ -262,6 +262,8 @@ class CiEntryPointTests(unittest.TestCase):
     def create_lifecycle_repo(
         self,
         *,
+        frozen_task_mutator=None,
+        frozen_files: dict[str, str] | None = None,
         task_mutator=None,
         manifest_mutator=None,
         descendant_files: dict[str, str] | None = None,
@@ -273,8 +275,15 @@ class CiEntryPointTests(unittest.TestCase):
         task["git"]["integration_candidate_sha"] = pre_squash_sha
         for ref in task["evidence_refs"]:
             ref["subject_sha"] = pre_squash_sha
+        if frozen_task_mutator:
+            frozen_task_mutator(task)
         self.write_task(repo, task)
         self.write_evidence(repo, task)
+        if frozen_files:
+            for relative, content in frozen_files.items():
+                path = repo / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8")
         merge_ready_sha = self.commit(repo, "squash-merged authorization snapshot")
 
         task = json.loads((repo / "docs/engineering/tasks/T001.yaml").read_text(encoding="utf-8"))
@@ -300,10 +309,13 @@ class CiEntryPointTests(unittest.TestCase):
         base_status: str,
         substantive: bool,
         rewrite_acceptance: bool,
+        task_mutator=None,
     ) -> tuple[tempfile.TemporaryDirectory, Path, str, str]:
         temporary, repo, original_base, _, _ = self.create_merge_ready_repo()
         task = self.recording_task(original_base)
         task["status"] = base_status
+        if task_mutator:
+            task_mutator(task)
         self.write_task(repo, task)
         base_sha = self.commit(repo, "ready-state base")
 
@@ -418,6 +430,67 @@ class CiEntryPointTests(unittest.TestCase):
         with temporary:
             result, output = self.run_ci(repo, base_sha, head_sha)
         self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_lifecycle_historical_architecture_impact_is_accepted(self) -> None:
+        def declare_architecture(task: dict) -> None:
+            task["change_impact"]["architecture"] = True
+
+        temporary, repo, base_sha, head_sha = self.create_lifecycle_repo(
+            frozen_task_mutator=declare_architecture,
+            frozen_files={
+                "docs/engineering/ARCHITECTURE.md": "# Historical architecture change\n"
+            },
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_pre_authorization_architecture_impact_still_requires_document(self) -> None:
+        def declare_architecture(task: dict) -> None:
+            task["change_impact"]["architecture"] = True
+
+        temporary, repo, base_sha, head_sha = self.create_ready_update_repo(
+            base_status="DESIGNING",
+            substantive=False,
+            rewrite_acceptance=False,
+            task_mutator=declare_architecture,
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual(result, 1)
+        self.assertIn(
+            "change_impact.architecture is true but docs/engineering/ARCHITECTURE.md was not changed",
+            output,
+        )
+
+    def test_substantive_architecture_impact_still_requires_document(self) -> None:
+        def declare_architecture(task: dict) -> None:
+            task["change_impact"]["architecture"] = True
+
+        temporary, repo, base_sha, _, head_sha = self.create_merge_ready_repo(
+            subject_mutator=declare_architecture,
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual(result, 1)
+        self.assertIn(
+            "change_impact.architecture is true but docs/engineering/ARCHITECTURE.md was not changed",
+            output,
+        )
+
+    def test_substantive_undeclared_architecture_change_is_rejected(self) -> None:
+        temporary, repo, base_sha, _, head_sha = self.create_merge_ready_repo(
+            descendant_files={
+                "docs/engineering/ARCHITECTURE.md": "# Undeclared architecture change\n"
+            }
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual(result, 1)
+        self.assertIn(
+            "docs/engineering/ARCHITECTURE.md changed but change_impact.architecture is false",
+            output,
+        )
 
     def test_ready_contract_semantics_cannot_change_without_new_version(self) -> None:
         temporary, repo, base_sha, head_sha = self.create_ready_update_repo(

@@ -409,15 +409,27 @@ def validate_pull_request(
         errors.append(f"Changed Task must exist at explicit head {head_sha}: {task_path}")
         return len(task_paths), errors
     old_task = yaml_at_ref(repo_root, base_sha, task_path)
-    errors.extend(validate_consistency(task, files, old_task))
-    errors.extend(validate_contract_semantics(task, old_task))
-
     task_id = str(task.get("id"))
     status = task.get("status")
     old_status = old_task.get("status") if old_task is not None else None
     base_is_authorized = (
         old_status in MAIN_STATES and MAIN_STATES.index(old_status) >= MERGE_READY_INDEX
     ) or has_merge_authorization_snapshot(old_task)
+    authorized_lifecycle = status != "MERGE_READY" and (
+        base_is_authorized
+        or status in MAIN_STATES
+        and MAIN_STATES.index(status) >= MERGED_INDEX
+    )
+    errors.extend(
+        validate_consistency(
+            task,
+            files,
+            old_task,
+            require_declared_impact_paths=not authorized_lifecycle,
+        )
+    )
+    errors.extend(validate_contract_semantics(task, old_task))
+
     substantive = any(not is_task_recording_path(path, task_id) for path in files)
     if substantive and status != "MERGE_READY":
         errors.append(
@@ -428,9 +440,7 @@ def validate_pull_request(
         errors.extend(
             validate_merge_ready_freshness(repo_root, task_path, task, base_sha, head_sha)
         )
-    elif base_is_authorized or (
-        status in MAIN_STATES and MAIN_STATES.index(status) >= MERGED_INDEX
-    ):
+    elif authorized_lifecycle:
         unexpected = [path for path in files if not is_lifecycle_path(path, task_id)]
         if unexpected:
             errors.append(

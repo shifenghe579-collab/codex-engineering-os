@@ -1,0 +1,11 @@
+task: T004
+contract_version: 2
+subject_sha: f9221339125839f11753e6ca0f49289c95c4565d
+reviewer: t004-reviewer
+mode: standard
+verdict: APPROVED
+blocking_findings: []
+non_blocking_findings:
+  - Focused automated tests directly cover architecture; spec, project, and ADR share the same narrow flag and were additionally exercised by Verifier black-box scenarios.
+  - Invalid post-authorization substantive paths skip only the missing-declared-document diagnostic but remain rejected by substantive-status and lifecycle-path gates.
+reviewed_at: 2026-09-01T11:29:31+08:00
