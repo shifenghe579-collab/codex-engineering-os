@@ -6,7 +6,7 @@
 - Implementation target: GitHub-first V1
 - Repository: https://github.com/shifenghe579-collab/codex-engineering-os
 - Active task: T002 evidence freshness and PR-head binding
-- Task state: MERGE_READY
+- Task state: MERGED
 - Contract version: 1
 - Base SHA: `0988d08978ed70179c80a11a4057e316edeb76c4`
 - Implementation SHA: `84d122585cb46a320c0159429e70aab4af4fef80`
@@ -15,7 +15,7 @@
 - Verifier: PASS
 - T002 substantive merge SHA: `00f8a106ce24ebe366798438716fd8e551659496`
 - T002 post-merge Actions: `33462130233` (SUCCESS)
-- T002 lifecycle state: ready to resume after T004 correction
+- T002 lifecycle state: MERGED
 - Completed task: T004 lifecycle impact consistency correction
 - T004 state: DEVELOPMENT_COMPLETE
 - T004 implementation squash merge SHA: `c38cb1cc98820742f9e54b8645c48e6b1240f4b5`
@@ -37,4 +37,4 @@
 
 ## Next checkpoint
 
-Merge this lifecycle-only state update, verify the new main SHA and CI, then update T002 PR #6 onto latest main and resume its MERGED lifecycle transition.
+Merge this lifecycle-only state update, verify the new main SHA and CI, then advance T002 to POST_MERGE_VERIFYING in the next legal transition.
