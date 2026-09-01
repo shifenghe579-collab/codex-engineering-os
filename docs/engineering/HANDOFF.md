@@ -6,11 +6,11 @@
 - Implementation target: GitHub-first V1
 - Repository: https://github.com/shifenghe579-collab/codex-engineering-os
 - Active task: T004 lifecycle impact consistency correction
-- Task state: INTEGRATION_VERIFYING
+- Task state: MERGE_READY
 - Contract version: 2
 - Base SHA: `00f8a106ce24ebe366798438716fd8e551659496`
 - Implementation SHA: `f9221339125839f11753e6ca0f49289c95c4565d`
-- Integration candidate SHA: pending
+- Integration candidate SHA: `a7765337f9d1ff9e99db2bdc84e089bb8a5279c1`
 - Reviewer: APPROVED
 - Verifier: PASS
 - T002 substantive merge SHA: `00f8a106ce24ebe366798438716fd8e551659496`
@@ -32,4 +32,4 @@
 
 ## Next checkpoint
 
-Commit the T004 integration candidate, bind integration evidence to its exact SHA, then create the merge-ready recording commit and run explicit main/head validation.
+Commit the candidate-bound integration evidence, validate the resulting PR head against explicit main/head refs, then run GitHub required checks and transmit the already explicit T004 user approval to the merge gates.
