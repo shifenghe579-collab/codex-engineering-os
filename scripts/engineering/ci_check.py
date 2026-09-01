@@ -118,6 +118,25 @@ def is_lifecycle_path(path: str, task_id: str) -> bool:
     }
 
 
+def has_merge_authorization_snapshot(task: dict[str, Any] | None) -> bool:
+    if task is None:
+        return False
+    git_data = task.get("git") if isinstance(task.get("git"), dict) else {}
+    approvals = task.get("approvals") if isinstance(task.get("approvals"), dict) else {}
+    evidence_types = {
+        ref.get("type")
+        for ref in task.get("evidence_refs", [])
+        if isinstance(ref, dict) and ref.get("valid") is True
+    }
+    return (
+        isinstance(git_data.get("integration_candidate_sha"), str)
+        and bool(git_data.get("integration_candidate_sha"))
+        and approvals.get("review") is not None
+        and approvals.get("acceptance") is not None
+        and {"implementation", "review", "acceptance", "integration"} <= evidence_types
+    )
+
+
 def validate_contract_semantics(task: dict, old_task: dict | None) -> list[str]:
     if old_task is None or task.get("contract_version") != old_task.get("contract_version"):
         return []
@@ -398,7 +417,7 @@ def validate_pull_request(
     old_status = old_task.get("status") if old_task is not None else None
     base_is_authorized = (
         old_status in MAIN_STATES and MAIN_STATES.index(old_status) >= MERGE_READY_INDEX
-    )
+    ) or has_merge_authorization_snapshot(old_task)
     substantive = any(not is_task_recording_path(path, task_id) for path in files)
     if substantive and status != "MERGE_READY":
         errors.append(

@@ -348,6 +348,25 @@ class CiEntryPointTests(unittest.TestCase):
         head_sha = self.commit(repo, f"{base_status.lower()} to blocked")
         return temporary, repo, base_sha, head_sha
 
+    def advance_blocked_repo(
+        self,
+        repo: Path,
+        *,
+        tamper: bool,
+    ) -> str:
+        task = json.loads((repo / "docs/engineering/tasks/T001.yaml").read_text(encoding="utf-8"))
+        task["status"] = "IMPLEMENTING"
+        if tamper:
+            task["git"]["integration_candidate_sha"] = "b" * 40
+            task["approvals"]["review"] = {
+                "by": "replacement",
+                "at": "2026-09-01T00:00:00Z",
+                "source_uri": "https://example.invalid/replacement",
+            }
+            task["evidence_refs"] = []
+        self.write_task(repo, task)
+        return self.commit(repo, "blocked to implementing")
+
     def run_ci(
         self,
         repo: Path,
@@ -486,6 +505,35 @@ class CiEntryPointTests(unittest.TestCase):
                     "changed Task fields other than status" in output
                     or "rewrote inherited Evidence manifest" in output
                 )
+
+    def test_merged_blocked_then_implementing_tampering_is_rejected(self) -> None:
+        temporary, repo, _, blocked_sha = self.create_authorized_blocked_repo(
+            base_status="MERGED"
+        )
+        with temporary:
+            implementing_sha = self.advance_blocked_repo(repo, tamper=True)
+            result, output = self.run_ci(repo, blocked_sha, implementing_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("changed Task fields other than status", output)
+
+    def test_merge_ready_blocked_then_implementing_tampering_is_rejected(self) -> None:
+        temporary, repo, _, blocked_sha = self.create_authorized_blocked_repo(
+            base_status="MERGE_READY"
+        )
+        with temporary:
+            implementing_sha = self.advance_blocked_repo(repo, tamper=True)
+            result, output = self.run_ci(repo, blocked_sha, implementing_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("changed Task fields other than status", output)
+
+    def test_authorized_blocked_to_implementing_status_only_is_accepted(self) -> None:
+        temporary, repo, _, blocked_sha = self.create_authorized_blocked_repo(
+            base_status="MERGED"
+        )
+        with temporary:
+            implementing_sha = self.advance_blocked_repo(repo, tamper=False)
+            result, output = self.run_ci(repo, blocked_sha, implementing_sha)
+        self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
 
     def test_merge_dag_subject_on_different_parent_chain_is_rejected(self) -> None:
         temporary = tempfile.TemporaryDirectory()
