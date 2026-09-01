@@ -6,13 +6,14 @@
 - Implementation target: GitHub-first V1
 - Repository: https://github.com/shifenghe579-collab/codex-engineering-os
 - Active task: T004 lifecycle impact consistency correction
-- Task state: MERGED
+- Task state: POST_MERGE_VERIFYING
 - Contract version: 2
 - Base SHA: `00f8a106ce24ebe366798438716fd8e551659496`
 - Implementation SHA: `f9221339125839f11753e6ca0f49289c95c4565d`
 - Integration candidate SHA: `a7765337f9d1ff9e99db2bdc84e089bb8a5279c1`
-- Squash merge SHA: `c38cb1cc98820742f9e54b8645c48e6b1240f4b5`
-- Post-merge Actions: `33467119032` (SUCCESS)
+- Implementation squash merge SHA: `c38cb1cc98820742f9e54b8645c48e6b1240f4b5`
+- Latest lifecycle merge SHA: `f21a273a29836b3422565860cd6136b24a001bc8`
+- Post-merge Actions: `33474067869` (SUCCESS)
 - Reviewer: APPROVED
 - Verifier: PASS
 - T002 substantive merge SHA: `00f8a106ce24ebe366798438716fd8e551659496`
@@ -34,4 +35,4 @@
 
 ## Next checkpoint
 
-Merge this lifecycle-only state update, then advance T004 to POST_MERGE_VERIFYING in the next legal transition.
+Merge this lifecycle-only state update, verify the new main SHA and CI, then advance T004 to DEVELOPMENT_COMPLETE in the next legal transition.
