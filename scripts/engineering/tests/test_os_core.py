@@ -316,6 +316,38 @@ class CiEntryPointTests(unittest.TestCase):
         head_sha = self.commit(repo, "ready-state head")
         return temporary, repo, base_sha, head_sha
 
+    def create_authorized_blocked_repo(
+        self,
+        *,
+        base_status: str,
+        tamper: str | None = None,
+    ) -> tuple[tempfile.TemporaryDirectory, Path, str, str]:
+        if base_status == "MERGE_READY":
+            temporary, repo, _, _, base_sha = self.create_merge_ready_repo()
+        else:
+            temporary, repo, _, base_sha = self.create_lifecycle_repo()
+
+        task = json.loads((repo / "docs/engineering/tasks/T001.yaml").read_text(encoding="utf-8"))
+        task["status"] = "BLOCKED"
+        if tamper == "candidate":
+            task["git"]["integration_candidate_sha"] = "b" * 40
+        elif tamper == "approval":
+            task["approvals"]["review"] = {
+                "by": "replacement",
+                "at": "2026-09-01T00:00:00Z",
+                "source_uri": "https://example.invalid/replacement",
+            }
+        elif tamper == "ref":
+            task["evidence_refs"][0]["source_uri"] = "https://example.invalid/rewrite"
+        self.write_task(repo, task)
+        if tamper == "manifest":
+            path = repo / "docs/engineering/evidence/T001/review.yaml"
+            evidence = json.loads(path.read_text(encoding="utf-8"))
+            evidence["note"] = "rewritten"
+            path.write_text(json.dumps(evidence), encoding="utf-8")
+        head_sha = self.commit(repo, f"{base_status.lower()} to blocked")
+        return temporary, repo, base_sha, head_sha
+
     def run_ci(
         self,
         repo: Path,
@@ -408,6 +440,101 @@ class CiEntryPointTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("not monotonic", output)
         self.assertIn("DESIGNING -> MERGE_READY", output)
+
+    def test_merge_ready_to_blocked_status_only_is_accepted(self) -> None:
+        temporary, repo, base_sha, head_sha = self.create_authorized_blocked_repo(
+            base_status="MERGE_READY"
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_merged_to_blocked_status_only_is_accepted(self) -> None:
+        temporary, repo, base_sha, head_sha = self.create_authorized_blocked_repo(
+            base_status="MERGED"
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_merge_ready_to_blocked_authorization_tampering_is_rejected(self) -> None:
+        for tamper in ("candidate", "approval", "ref", "manifest"):
+            with self.subTest(tamper=tamper):
+                temporary, repo, base_sha, head_sha = self.create_authorized_blocked_repo(
+                    base_status="MERGE_READY",
+                    tamper=tamper,
+                )
+                with temporary:
+                    result, output = self.run_ci(repo, base_sha, head_sha)
+                self.assertEqual(result, 1)
+                self.assertTrue(
+                    "changed Task fields other than status" in output
+                    or "rewrote inherited Evidence manifest" in output
+                )
+
+    def test_merged_to_blocked_authorization_tampering_is_rejected(self) -> None:
+        for tamper in ("candidate", "approval", "ref", "manifest"):
+            with self.subTest(tamper=tamper):
+                temporary, repo, base_sha, head_sha = self.create_authorized_blocked_repo(
+                    base_status="MERGED",
+                    tamper=tamper,
+                )
+                with temporary:
+                    result, output = self.run_ci(repo, base_sha, head_sha)
+                self.assertEqual(result, 1)
+                self.assertTrue(
+                    "changed Task fields other than status" in output
+                    or "rewrote inherited Evidence manifest" in output
+                )
+
+    def test_merge_dag_subject_on_different_parent_chain_is_rejected(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        repo = Path(temporary.name)
+        with temporary:
+            (repo / "governance").mkdir()
+            for name in ("RISK_RULES.yaml", "GATE_POLICY.yaml"):
+                (repo / "governance" / name).write_text(
+                    (REPO_ROOT / "governance" / name).read_text(encoding="utf-8"),
+                    encoding="utf-8",
+                )
+            self.git(repo, "init", "-b", "main")
+            self.git(repo, "config", "user.name", "test")
+            self.git(repo, "config", "user.email", "test@example.invalid")
+            root_sha = self.commit(repo, "root")
+            self.git(repo, "branch", "side", root_sha)
+            (repo / "main.txt").write_text("base\n", encoding="utf-8")
+            base_sha = self.commit(repo, "explicit base")
+
+            self.git(repo, "switch", "side")
+            subject_task = self.recording_task(base_sha)
+            self.write_task(repo, subject_task)
+            (repo / "src").mkdir()
+            (repo / "src/app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            subject_sha = self.commit(repo, "side authorization subject")
+
+            self.git(repo, "switch", "main")
+            self.git(repo, "merge", "--no-ff", "side", "-m", "merge side")
+            final_task = deepcopy(subject_task)
+            final_task["status"] = "MERGE_READY"
+            final_task["git"]["implementation_sha"] = subject_sha
+            final_task["git"]["integration_candidate_sha"] = subject_sha
+            final_task["approvals"]["review"] = approval()
+            final_task["approvals"]["acceptance"] = approval()
+            final_task["evidence_refs"] = [
+                {
+                    "type": evidence_type,
+                    "path": f"docs/engineering/evidence/T001/{evidence_type}.yaml",
+                    "subject_sha": subject_sha,
+                    "valid": True,
+                }
+                for evidence_type in ("implementation", "review", "acceptance", "integration")
+            ]
+            self.write_task(repo, final_task)
+            self.write_evidence(repo, final_task)
+            head_sha = self.commit(repo, "record merged authorization")
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("is not an ancestor of implementation_sha", output)
 
     def test_source_test_workflow_and_governance_descendants_are_rejected(self) -> None:
         cases = {

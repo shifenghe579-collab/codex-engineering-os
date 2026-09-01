@@ -395,6 +395,10 @@ def validate_pull_request(
 
     task_id = str(task.get("id"))
     status = task.get("status")
+    old_status = old_task.get("status") if old_task is not None else None
+    base_is_authorized = (
+        old_status in MAIN_STATES and MAIN_STATES.index(old_status) >= MERGE_READY_INDEX
+    )
     substantive = any(not is_task_recording_path(path, task_id) for path in files)
     if substantive and status != "MERGE_READY":
         errors.append(
@@ -405,7 +409,9 @@ def validate_pull_request(
         errors.extend(
             validate_merge_ready_freshness(repo_root, task_path, task, base_sha, head_sha)
         )
-    elif status in MAIN_STATES and MAIN_STATES.index(status) >= MERGED_INDEX:
+    elif base_is_authorized or (
+        status in MAIN_STATES and MAIN_STATES.index(status) >= MERGED_INDEX
+    ):
         unexpected = [path for path in files if not is_lifecycle_path(path, task_id)]
         if unexpected:
             errors.append(
