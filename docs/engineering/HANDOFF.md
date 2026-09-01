@@ -5,20 +5,22 @@
 - Architecture baseline: approved
 - Implementation target: GitHub-first V1
 - Repository: https://github.com/shifenghe579-collab/codex-engineering-os
-- Active task: T004 lifecycle impact consistency correction
-- Task state: POST_MERGE_VERIFYING
-- Contract version: 2
-- Base SHA: `00f8a106ce24ebe366798438716fd8e551659496`
-- Implementation SHA: `f9221339125839f11753e6ca0f49289c95c4565d`
-- Integration candidate SHA: `a7765337f9d1ff9e99db2bdc84e089bb8a5279c1`
-- Implementation squash merge SHA: `c38cb1cc98820742f9e54b8645c48e6b1240f4b5`
-- Latest lifecycle merge SHA: `f21a273a29836b3422565860cd6136b24a001bc8`
-- Post-merge Actions: `33474067869` (SUCCESS)
+- Active task: T002 evidence freshness and PR-head binding
+- Task state: MERGE_READY
+- Contract version: 1
+- Base SHA: `0988d08978ed70179c80a11a4057e316edeb76c4`
+- Implementation SHA: `84d122585cb46a320c0159429e70aab4af4fef80`
+- Integration candidate SHA: `a39be20a72ffcc68ce723c789a65812694afd89c`
 - Reviewer: APPROVED
 - Verifier: PASS
 - T002 substantive merge SHA: `00f8a106ce24ebe366798438716fd8e551659496`
 - T002 post-merge Actions: `33462130233` (SUCCESS)
-- T002 lifecycle state: pending T004 correction
+- T002 lifecycle state: ready to resume after T004 correction
+- Completed task: T004 lifecycle impact consistency correction
+- T004 state: DEVELOPMENT_COMPLETE
+- T004 implementation squash merge SHA: `c38cb1cc98820742f9e54b8645c48e6b1240f4b5`
+- T004 latest lifecycle merge SHA: `37a558503e7476b47e5da90a702e1b4c5d860fcb`
+- T004 post-merge Actions: `33474277385` (SUCCESS)
 - Completed task: T001 merge-gate hardening
 - T001 state: DEVELOPMENT_COMPLETE
 - T001 final main SHA: `0988d08978ed70179c80a11a4057e316edeb76c4`
@@ -35,4 +37,4 @@
 
 ## Next checkpoint
 
-Merge this lifecycle-only state update, verify the new main SHA and CI, then advance T004 to DEVELOPMENT_COMPLETE in the next legal transition.
+Merge this lifecycle-only state update, verify the new main SHA and CI, then update T002 PR #6 onto latest main and resume its MERGED lifecycle transition.
