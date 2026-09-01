@@ -1,7 +1,7 @@
 id: T002
 kind: governance
 contract_version: 1
-status: READY
+status: INTEGRATION_VERIFYING
 
 goal: Prevent stale or unrelated Evidence from authorizing a pull-request HEAD that contains later substantive changes.
 current_behavior: CI validates that Evidence subject SHAs match Task Contract SHA fields, but it does not prove that those SHAs are ancestors of the pull-request HEAD or that later changes are limited to lifecycle bookkeeping.
@@ -88,7 +88,7 @@ dispatch:
 
 git:
   base_sha: 0988d08978ed70179c80a11a4057e316edeb76c4
-  implementation_sha: null
+  implementation_sha: 84d122585cb46a320c0159429e70aab4af4fef80
   integration_candidate_sha: null
 
 approvals:
@@ -100,8 +100,14 @@ approvals:
     by: t002-architecture-challenger
     at: 2026-09-01T09:15:56+08:00
     source_uri: codex-agent://t002_arch_challenge#approved-v1
-  review: null
-  acceptance: null
+  review:
+    by: t002-reviewer
+    at: 2026-09-01T10:03:21+08:00
+    source_uri: codex-agent://t002_reviewer#approved-84d1225
+  acceptance:
+    by: t002-verifier
+    at: 2026-09-01T10:03:21+08:00
+    source_uri: codex-agent://t002_verifier#pass-84d1225
   risk: null
 
 proposed_state_changes:
@@ -112,4 +118,16 @@ governance_baseline:
   commit: 0988d08978ed70179c80a11a4057e316edeb76c4
   digest: sha256:b55ce41837f501614087001413f7454350c792770a32461d233d2577f2bcbb8b
 
-evidence_refs: []
+evidence_refs:
+  - type: implementation
+    path: docs/engineering/evidence/T002/implementation.yaml
+    subject_sha: 84d122585cb46a320c0159429e70aab4af4fef80
+    valid: true
+  - type: review
+    path: docs/engineering/evidence/T002/review.yaml
+    subject_sha: 84d122585cb46a320c0159429e70aab4af4fef80
+    valid: true
+  - type: acceptance
+    path: docs/engineering/evidence/T002/acceptance.yaml
+    subject_sha: 84d122585cb46a320c0159429e70aab4af4fef80
+    valid: true

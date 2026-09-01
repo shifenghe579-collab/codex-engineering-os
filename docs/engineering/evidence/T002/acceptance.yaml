@@ -1,0 +1,38 @@
+task: T002
+contract_version: 1
+subject_sha: 84d122585cb46a320c0159429e70aab4af4fef80
+verifier: t002-verifier
+plan_ref: docs/engineering/tasks/T002.yaml#acceptance_criteria
+verdict: PASS
+scenarios:
+  - name: Fresh authorization lineage and recording descendant
+    expected: Explicit base, authorization subjects, and explicit head form a complete chain with only same-task recording afterward.
+    actual: Valid recording descendants passed; stale base, missing objects, non-ancestors, and a different merge-parent chain failed closed.
+    result: PASS
+    evidence_ref: codex-agent://t002_verifier#lineage-84d1225
+  - name: Substantive or unrelated descendant changes
+    expected: Source, test, workflow, governance, and unrelated-task changes after authorization are rejected.
+    actual: Every class was rejected with the offending path identified.
+    result: PASS
+    evidence_ref: codex-agent://t002_verifier#descendants-84d1225
+  - name: Authorization snapshot and monotonic recording
+    expected: Contract provenance remains frozen and recording fields cannot be rewritten.
+    actual: Contract, baseline, approvals, candidate, Evidence refs, valid flags, and manifests were protected; pre-READY subjects were rejected.
+    result: PASS
+    evidence_ref: codex-agent://t002_verifier#snapshot-84d1225
+  - name: Squash lifecycle and exception-state inheritance
+    expected: Legal status-only transitions pass while inherited authorization remains frozen across multiple exception-state hops.
+    actual: MERGE_READY/MERGED through BLOCKED to IMPLEMENTING passed unchanged; candidate, approval, Evidence ref, and manifest tampering failed.
+    result: PASS
+    evidence_ref: codex-agent://t002_verifier#lifecycle-84d1225
+  - name: Explicit head and missing history
+    expected: Validation uses the explicit head tree and fails closed when required history is unavailable.
+    actual: A checkout/head mismatch used the explicit head; missing history returned a clear nonzero result.
+    result: PASS
+    evidence_ref: codex-agent://t002_verifier#explicit-head-84d1225
+  - name: Complete regression suite
+    expected: Existing and new engineering gate tests pass without base-ref regression.
+    actual: 46 tests passed; compileall and repository validation without base-ref passed for two Task Contracts.
+    result: PASS
+    evidence_ref: codex-agent://t002_verifier#suite-84d1225
+verified_at: 2026-09-01T10:03:21+08:00
