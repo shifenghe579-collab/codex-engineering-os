@@ -154,38 +154,61 @@ class CiEntryPointTests(unittest.TestCase):
         )
         return result.stdout.strip()
 
-    def task_for_status(self, status: str, subject_sha: str) -> dict:
+    def commit(self, repo: Path, message: str) -> str:
+        self.git(repo, "add", ".")
+        self.git(repo, "commit", "-m", message)
+        return self.git(repo, "rev-parse", "HEAD")
+
+    def write_task(self, repo: Path, task: dict) -> None:
+        path = repo / "docs/engineering/tasks/T001.yaml"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(task, indent=2), encoding="utf-8")
+
+    def recording_task(self, base_sha: str) -> dict:
         task = valid_task()
-        task["status"] = status
-        task["scope"]["allowed"].append("docs/engineering/evidence/T001/**")
-        if status in {"MERGE_READY", "MERGED"}:
-            task["git"]["implementation_sha"] = subject_sha
-            task["git"]["integration_candidate_sha"] = subject_sha
-            task["approvals"]["review"] = approval()
-            task["approvals"]["acceptance"] = approval()
-            task["evidence_refs"] = [
-                {
-                    "type": evidence_type,
-                    "path": f"docs/engineering/evidence/T001/{evidence_type}.yaml",
-                    "subject_sha": subject_sha,
-                    "valid": True,
-                }
-                for evidence_type in ("implementation", "review", "acceptance", "integration")
-            ]
+        task["kind"] = "governance"
+        task["git"]["base_sha"] = base_sha
+        task["scope"] = {
+            "allowed": [
+                "src/**",
+                "tests/**",
+                ".github/**",
+                "governance/**",
+                "docs/engineering/tasks/T001.yaml",
+                "docs/engineering/evidence/T001/**",
+                "docs/engineering/HANDOFF.md",
+            ],
+            "forbidden": [],
+        }
         return task
 
-    def create_repo(
+    def write_evidence(self, repo: Path, task: dict) -> None:
+        evidence_dir = repo / "docs/engineering/evidence/T001"
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+        for ref in task["evidence_refs"]:
+            (repo / ref["path"]).write_text(
+                json.dumps(
+                    {
+                        "task": "T001",
+                        "contract_version": task["contract_version"],
+                        "subject_sha": ref["subject_sha"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+    def create_merge_ready_repo(
         self,
-        base_status: str,
-        head_status: str,
-        substantive: bool,
-        rewrite_acceptance: bool = False,
-    ) -> tuple[tempfile.TemporaryDirectory, Path, str]:
+        *,
+        descendant_files: dict[str, str] | None = None,
+        subject_mutator=None,
+        final_mutator=None,
+        subject_present: bool = True,
+        final_version: int = 1,
+    ) -> tuple[tempfile.TemporaryDirectory, Path, str, str, str]:
         temporary = tempfile.TemporaryDirectory()
         repo = Path(temporary.name)
         (repo / "governance").mkdir()
-        (repo / "docs/engineering/tasks").mkdir(parents=True)
-        (repo / "docs/engineering/evidence/T001").mkdir(parents=True)
         for name in ("RISK_RULES.yaml", "GATE_POLICY.yaml"):
             (repo / "governance" / name).write_text(
                 (REPO_ROOT / "governance" / name).read_text(encoding="utf-8"),
@@ -195,98 +218,290 @@ class CiEntryPointTests(unittest.TestCase):
         self.git(repo, "init", "-b", "main")
         self.git(repo, "config", "user.name", "test")
         self.git(repo, "config", "user.email", "test@example.invalid")
-        (repo / "docs/engineering/tasks/T001.yaml").write_text(
-            json.dumps(self.task_for_status(base_status, "a" * 40)),
-            encoding="utf-8",
-        )
-        self.git(repo, "add", ".")
-        self.git(repo, "commit", "-m", "base")
-        base_sha = self.git(repo, "rev-parse", "HEAD")
+        base_sha = self.commit(repo, "base")
 
-        task = self.task_for_status(head_status, base_sha)
-        task["git"]["base_sha"] = base_sha
-        if rewrite_acceptance:
-            task["acceptance_criteria"] = ["Rewritten acceptance semantics."]
-        (repo / "docs/engineering/tasks/T001.yaml").write_text(json.dumps(task), encoding="utf-8")
-        for evidence_type in ("implementation", "review", "acceptance", "integration"):
-            (repo / f"docs/engineering/evidence/T001/{evidence_type}.yaml").write_text(
-                json.dumps({"task": "T001", "contract_version": 1, "subject_sha": base_sha}),
-                encoding="utf-8",
-            )
-        if substantive:
-            (repo / "src").mkdir()
-            (repo / "src/app.py").write_text("VALUE = 1\n", encoding="utf-8")
-        self.git(repo, "add", ".")
-        self.git(repo, "commit", "-m", "head")
-        return temporary, repo, base_sha
+        subject_task = self.recording_task(base_sha)
+        if subject_mutator:
+            subject_mutator(subject_task)
+        if subject_present:
+            self.write_task(repo, subject_task)
+        (repo / "src").mkdir()
+        (repo / "src/app.py").write_text("VALUE = 1\n", encoding="utf-8")
+        subject_sha = self.commit(repo, "authorization subject")
 
-    def run_ci(self, repo: Path, base_sha: str | None) -> tuple[int, str]:
+        if descendant_files:
+            for relative, content in descendant_files.items():
+                path = repo / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8")
+            self.commit(repo, "later change")
+
+        final_task = deepcopy(subject_task)
+        final_task["contract_version"] = final_version
+        final_task["status"] = "MERGE_READY"
+        final_task["git"]["implementation_sha"] = subject_sha
+        final_task["git"]["integration_candidate_sha"] = subject_sha
+        final_task["approvals"]["review"] = approval()
+        final_task["approvals"]["acceptance"] = approval()
+        final_task["evidence_refs"] = [
+            {
+                "type": evidence_type,
+                "path": f"docs/engineering/evidence/T001/{evidence_type}.yaml",
+                "subject_sha": subject_sha,
+                "valid": True,
+            }
+            for evidence_type in ("implementation", "review", "acceptance", "integration")
+        ]
+        if final_mutator:
+            final_mutator(final_task)
+        self.write_task(repo, final_task)
+        self.write_evidence(repo, final_task)
+        head_sha = self.commit(repo, "record authorization")
+        return temporary, repo, base_sha, subject_sha, head_sha
+
+    def create_lifecycle_repo(
+        self,
+        *,
+        task_mutator=None,
+        manifest_mutator=None,
+    ) -> tuple[tempfile.TemporaryDirectory, Path, str, str]:
+        temporary, repo, _, _, _ = self.create_merge_ready_repo()
+        task = json.loads((repo / "docs/engineering/tasks/T001.yaml").read_text(encoding="utf-8"))
+        pre_squash_sha = "a" * 40
+        task["git"]["implementation_sha"] = pre_squash_sha
+        task["git"]["integration_candidate_sha"] = pre_squash_sha
+        for ref in task["evidence_refs"]:
+            ref["subject_sha"] = pre_squash_sha
+        self.write_task(repo, task)
+        self.write_evidence(repo, task)
+        merge_ready_sha = self.commit(repo, "squash-merged authorization snapshot")
+
+        task = json.loads((repo / "docs/engineering/tasks/T001.yaml").read_text(encoding="utf-8"))
+        task["status"] = "MERGED"
+        if task_mutator:
+            task_mutator(task)
+        self.write_task(repo, task)
+        handoff = repo / "docs/engineering/HANDOFF.md"
+        handoff.write_text("T001 merged\n", encoding="utf-8")
+        if manifest_mutator:
+            manifest_mutator(repo)
+        head_sha = self.commit(repo, "lifecycle")
+        return temporary, repo, merge_ready_sha, head_sha
+
+    def run_ci(
+        self,
+        repo: Path,
+        base_sha: str | None,
+        head_ref: str = "HEAD",
+    ) -> tuple[int, str]:
         arguments = ["ci_check.py", "--repo-root", str(repo)]
         if base_sha:
-            arguments.extend(["--base-ref", base_sha, "--head-ref", "HEAD"])
+            arguments.extend(["--base-ref", base_sha, "--head-ref", head_ref])
         output = io.StringIO()
         with patch.object(sys, "argv", arguments), redirect_stdout(output), redirect_stderr(output):
             result = ci_main()
         return result, output.getvalue()
 
-    def test_substantive_ready_is_rejected(self) -> None:
-        temporary, repo, base_sha = self.create_repo("DESIGNING", "READY", substantive=True)
-        with temporary:
-            result, output = self.run_ci(repo, base_sha)
-        self.assertEqual(result, 1)
-        self.assertIn("require Task Contract status MERGE_READY; found READY", output)
-
-    def test_substantive_merge_ready_is_accepted(self) -> None:
-        temporary, repo, base_sha = self.create_repo("INTEGRATION_VERIFYING", "MERGE_READY", substantive=True)
+    def test_recording_descendant_is_accepted(self) -> None:
+        temporary, repo, base_sha, _, _ = self.create_merge_ready_repo()
         with temporary:
             result, output = self.run_ci(repo, base_sha)
         self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
 
-    def test_substantive_merged_is_rejected(self) -> None:
-        temporary, repo, base_sha = self.create_repo("MERGE_READY", "MERGED", substantive=True)
+    def test_source_test_workflow_and_governance_descendants_are_rejected(self) -> None:
+        cases = {
+            "src/late.py": "VALUE = 2\n",
+            "tests/test_late.py": "def test_late(): pass\n",
+            ".github/workflows/late.yml": "name: late\n",
+            "governance/late.txt": "late\n",
+        }
+        for path, content in cases.items():
+            with self.subTest(path=path):
+                temporary, repo, base_sha, _, _ = self.create_merge_ready_repo(
+                    descendant_files={path: content}
+                )
+                with temporary:
+                    result, output = self.run_ci(repo, base_sha)
+                self.assertEqual(result, 1)
+                self.assertIn("Substantive or unrelated changes follow", output)
+                self.assertIn(path, output)
+
+    def test_unrelated_task_bookkeeping_is_rejected(self) -> None:
+        temporary, repo, base_sha, _, _ = self.create_merge_ready_repo(
+            descendant_files={"docs/engineering/evidence/T999/review.yaml": "task: T999\n"}
+        )
         with temporary:
             result, output = self.run_ci(repo, base_sha)
         self.assertEqual(result, 1)
-        self.assertIn("require Task Contract status MERGE_READY; found MERGED", output)
+        self.assertIn("docs/engineering/evidence/T999/review.yaml", output)
 
-    def test_lifecycle_only_merge_transition_is_accepted(self) -> None:
-        temporary, repo, base_sha = self.create_repo("MERGE_READY", "MERGED", substantive=False)
+    def test_missing_authorization_sha_fails_closed(self) -> None:
+        missing = "f" * 40
+
+        def mutate(task: dict) -> None:
+            task["git"]["implementation_sha"] = missing
+            task["git"]["integration_candidate_sha"] = missing
+            for ref in task["evidence_refs"]:
+                ref["subject_sha"] = missing
+
+        temporary, repo, base_sha, _, _ = self.create_merge_ready_repo(final_mutator=mutate)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("commit is unavailable", output)
+
+    def test_non_ancestor_authorization_sha_is_rejected(self) -> None:
+        temporary, repo, base_sha, _, head_sha = self.create_merge_ready_repo()
+        with temporary:
+            self.git(repo, "switch", "-c", "side", base_sha)
+            side_task = self.recording_task(base_sha)
+            self.write_task(repo, side_task)
+            side_sha = self.commit(repo, "side authorization")
+            self.git(repo, "switch", "main")
+            task = json.loads((repo / "docs/engineering/tasks/T001.yaml").read_text(encoding="utf-8"))
+            task["git"]["implementation_sha"] = side_sha
+            task["git"]["integration_candidate_sha"] = side_sha
+            for ref in task["evidence_refs"]:
+                ref["subject_sha"] = side_sha
+            self.write_task(repo, task)
+            self.write_evidence(repo, task)
+            head_sha = self.commit(repo, "point to side")
+            result, output = self.run_ci(repo, base_sha, head_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("not an ancestor of explicit PR head", output)
+
+    def test_stale_declared_base_is_rejected(self) -> None:
+        def mutate(task: dict) -> None:
+            task["git"]["base_sha"] = task["git"]["implementation_sha"]
+
+        temporary, repo, base_sha, _, _ = self.create_merge_ready_repo(final_mutator=mutate)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("does not identify explicit PR base", output)
+
+    def test_authorization_subject_must_contain_task(self) -> None:
+        temporary, repo, base_sha, _, _ = self.create_merge_ready_repo(subject_present=False)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("does not contain docs/engineering/tasks/T001.yaml", output)
+
+    def test_authorization_subject_contract_version_is_frozen(self) -> None:
+        temporary, repo, base_sha, _, _ = self.create_merge_ready_repo(final_version=2)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("uses a different contract version", output)
+
+    def test_authorization_semantics_are_frozen(self) -> None:
+        def mutate(task: dict) -> None:
+            task["acceptance_criteria"] = ["Rewritten acceptance semantics."]
+
+        temporary, repo, base_sha, _, _ = self.create_merge_ready_repo(final_mutator=mutate)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("changed frozen fields: acceptance_criteria", output)
+
+    def test_recording_fields_must_be_monotonic(self) -> None:
+        def subject_mutator(task: dict) -> None:
+            task["git"]["implementation_sha"] = task["git"]["base_sha"]
+            task["approvals"]["review"] = {
+                "by": "old-reviewer",
+                "at": "2026-08-30T00:00:00Z",
+                "source_uri": "https://example.invalid/old",
+            }
+
+        temporary, repo, base_sha, _, _ = self.create_merge_ready_repo(
+            subject_mutator=subject_mutator
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("implementation_sha changed non-monotonically", output)
+        self.assertIn("review approval changed non-monotonically", output)
+
+    def test_evidence_refs_cannot_be_rewritten(self) -> None:
+        def subject_mutator(task: dict) -> None:
+            task["evidence_refs"] = [
+                {
+                    "type": "implementation",
+                    "path": "docs/engineering/evidence/T001/old.yaml",
+                    "subject_sha": task["git"]["base_sha"],
+                    "valid": False,
+                }
+            ]
+
+        temporary, repo, base_sha, _, _ = self.create_merge_ready_repo(
+            subject_mutator=subject_mutator
+        )
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("Evidence references were rewritten", output)
+
+    def test_squash_lifecycle_inherits_pre_squash_authorization(self) -> None:
+        temporary, repo, base_sha, _ = self.create_lifecycle_repo()
         with temporary:
             result, output = self.run_ci(repo, base_sha)
         self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
 
-    def test_ready_contract_semantics_cannot_change_without_new_version(self) -> None:
-        temporary, repo, base_sha = self.create_repo(
-            "READY",
-            "READY",
-            substantive=False,
-            rewrite_acceptance=True,
-        )
-        with temporary:
-            result, output = self.run_ci(repo, base_sha)
-        self.assertEqual(result, 1)
-        self.assertIn(
-            "Contract semantics changed without incrementing contract_version: acceptance_criteria",
-            output,
-        )
+    def test_lifecycle_candidate_and_approval_are_frozen(self) -> None:
+        def mutate(task: dict) -> None:
+            task["git"]["integration_candidate_sha"] = "b" * 40
+            task["approvals"]["review"] = {
+                "by": "replacement",
+                "at": "2026-09-01T00:00:00Z",
+                "source_uri": "https://example.invalid/replacement",
+            }
 
-    def test_merge_ready_contract_semantics_cannot_change_without_new_version(self) -> None:
-        temporary, repo, base_sha = self.create_repo(
-            "MERGE_READY",
-            "MERGE_READY",
-            substantive=False,
-            rewrite_acceptance=True,
-        )
+        temporary, repo, base_sha, _ = self.create_lifecycle_repo(task_mutator=mutate)
         with temporary:
             result, output = self.run_ci(repo, base_sha)
         self.assertEqual(result, 1)
-        self.assertIn(
-            "Contract semantics changed without incrementing contract_version: acceptance_criteria",
-            output,
-        )
+        self.assertIn("changed Task fields other than status", output)
+
+    def test_lifecycle_existing_evidence_ref_is_frozen(self) -> None:
+        def mutate(task: dict) -> None:
+            task["evidence_refs"][0]["source_uri"] = "https://example.invalid/rewrite"
+
+        temporary, repo, base_sha, _ = self.create_lifecycle_repo(task_mutator=mutate)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("changed Task fields other than status", output)
+
+    def test_lifecycle_existing_manifest_is_frozen(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "docs/engineering/evidence/T001/review.yaml"
+            evidence = json.loads(path.read_text(encoding="utf-8"))
+            evidence["note"] = "rewritten"
+            path.write_text(json.dumps(evidence), encoding="utf-8")
+
+        temporary, repo, base_sha, _ = self.create_lifecycle_repo(manifest_mutator=mutate)
+        with temporary:
+            result, output = self.run_ci(repo, base_sha)
+        self.assertEqual(result, 1)
+        self.assertIn("rewrote inherited Evidence manifest", output)
+
+    def test_explicit_head_is_used_when_checkout_head_differs(self) -> None:
+        temporary, repo, base_sha, _, explicit_head = self.create_merge_ready_repo()
+        with temporary:
+            self.git(repo, "checkout", "--detach", base_sha)
+            result, output = self.run_ci(repo, base_sha, explicit_head)
+        self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
+
+    def test_missing_history_fails_closed(self) -> None:
+        temporary, repo, _, _, _ = self.create_merge_ready_repo()
+        with temporary:
+            result, output = self.run_ci(repo, "deadbeef")
+        self.assertEqual(result, 2)
+        self.assertIn("commit is unavailable", output)
+        self.assertIn("non-shallow history", output)
 
     def test_repository_validation_without_base_ref_is_accepted(self) -> None:
-        temporary, repo, _ = self.create_repo("DESIGNING", "READY", substantive=True)
+        temporary, repo, _, _, _ = self.create_merge_ready_repo()
         with temporary:
             result, output = self.run_ci(repo, None)
         self.assertEqual((result, output), (0, "PASS: validated 1 formal task contract(s)\n"))
